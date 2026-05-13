@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  permissions RolePermission[]
+  users       User[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  action      String           @unique
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model User {
+  id        String   @id
+  email     String
+  username  String?
+  firstName String?
+  lastName  String?
+  imageUrl  String?
+  isActive  Boolean  @default(true)
+  roleId    String?
+  role      Role?    @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Unit {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  abbreviation String    @unique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  products     Product[]
+}
+
+model ProductCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model ProductCounter {
+  id      String @id @default(cuid())
+  prefix  String @unique
+  lastSeq Int    @default(0)
+}
+
+model SystemConfig {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+model Product {
+  id                String          @id @default(cuid())
+  code              String          @unique
+  name              String
+  description       String?
+  productCategoryId String
+  productCategory   ProductCategory @relation(fields: [productCategoryId], references: [id])
+  unitId            String
+  unit              Unit            @relation(fields: [unitId], references: [id])
+  sellingPrice      Decimal
+  purchasePrice     Decimal?
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+enum AuditCategory {
+  FINANCIAL
+  OPERATIONAL
+  SYSTEM
+}
+
+model AuditLog {
+  id         String        @id @default(cuid())
+  actorId    String
+  entityType String
+  entityId   String?
+  action     String
+  category   AuditCategory
+  diff       Json?
+  metadata   Json?
+  createdAt  DateTime      @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
