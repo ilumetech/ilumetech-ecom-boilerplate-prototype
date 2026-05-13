@@ -1,5 +1,5 @@
-// Account placeholder
+import { redirect } from "next/navigation"
 
 export default function AccountPage() {
-  return null
+  redirect("/account/profile")
 }
