@@ -250,8 +250,8 @@ export default function CheckoutPage() {
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Return to cart
               </Link>
-              <Button className="h-14 rounded-none bg-black px-8 text-sm font-bold uppercase tracking-widest text-white hover:bg-zinc-800">
-                Pay Now
+              <Button asChild className="h-14 rounded-none bg-black px-8 text-sm font-bold uppercase tracking-widest text-white hover:bg-zinc-800">
+                <Link href="/success">Pay Now</Link>
               </Button>
             </div>
           </div>
