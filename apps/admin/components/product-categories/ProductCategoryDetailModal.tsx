@@ -3,6 +3,7 @@
 import { Button, Descriptions, Modal, Spin, Tag } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import type { ProductCategory } from "@ilumetech/types";
+import { PERMISSIONS } from "@ilumetech/types";
 import { productCategoryApi } from "@/lib/api/product-category";
 import { PRODUCT_CATEGORY_LABELS } from "@/lib/labels/product-category";
 import { Can } from "@/components/auth/Can";
@@ -35,7 +36,7 @@ export function ProductCategoryDetailModal({
     <Button key="close" onClick={onClose}>
       Tutup
     </Button>,
-    <Can key="edit" permission="product-category:update">
+    <Can permission={PERMISSIONS.PRODUCT_CATEGORY.UPDATE}>
       <Button type="primary" onClick={handleEditClick} disabled={!category}>
         Edit
       </Button>

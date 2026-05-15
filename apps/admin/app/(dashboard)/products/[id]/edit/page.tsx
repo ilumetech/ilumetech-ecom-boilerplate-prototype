@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { PERMISSIONS } from "@ilumetech/types";
 import { ProductForm } from "@/components/products/ProductForm";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
@@ -14,7 +15,7 @@ export default async function EditProductPage({
       <div className="mb-6">
         <h1 className="text-xl font-semibold m-0">Edit Produk</h1>
       </div>
-      <PermissionGate permission="product:update">
+      <PermissionGate permission={PERMISSIONS.PRODUCT.UPDATE}>
         <Suspense fallback={<div>Memuat...</div>}>
           <ProductForm mode="edit" productId={id} />
         </Suspense>

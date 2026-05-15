@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TableColumnsType, TablePaginationConfig } from "antd";
 import type { SorterResult, FilterValue } from "antd/es/table/interface";
 import type { ProductCategory } from "@ilumetech/types";
+import { PERMISSIONS } from "@ilumetech/types";
 import { productCategoryApi } from "@/lib/api/product-category";
 import type { ProductCategoryQueryParams } from "@/lib/api/product-category";
 import { PRODUCT_CATEGORY_LABELS } from "@/lib/labels/product-category";
@@ -123,7 +124,7 @@ export function ProductCategoryTable() {
     <>
       <div className="flex justify-between mb-4">
         <Space>
-          <Can permission="product-category:create">
+          <Can permission={PERMISSIONS.PRODUCT_CATEGORY.CREATE}>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
               Tambah Kategori Produk
             </Button>
@@ -222,10 +223,10 @@ function buildTableColumns({ onEdit, onDelete }: ColumnBuilderParams): TableColu
       key: "actions",
       render: (_: unknown, record: ProductCategory) => (
         <Space size="small" onClick={(e) => e.stopPropagation()}>
-          <Can permission="product-category:update">
+          <Can permission={PERMISSIONS.PRODUCT_CATEGORY.UPDATE}>
             <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
           </Can>
-          <Can permission="product-category:delete">
+          <Can permission={PERMISSIONS.PRODUCT_CATEGORY.DELETE}>
             <Button
               type="text"
               danger

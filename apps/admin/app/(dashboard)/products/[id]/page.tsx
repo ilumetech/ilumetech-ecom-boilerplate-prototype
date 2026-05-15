@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { PERMISSIONS } from "@ilumetech/types";
 import { ProductDetailView } from "@/components/products/ProductDetailView";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
@@ -11,7 +12,7 @@ export default async function ProductDetailPage({
 
   return (
     <div className="p-6">
-      <PermissionGate permission="product:read">
+      <PermissionGate permission={PERMISSIONS.PRODUCT.READ}>
         <Suspense fallback={<div>Memuat...</div>}>
           <ProductDetailView productId={id} />
         </Suspense>

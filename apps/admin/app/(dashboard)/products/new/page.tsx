@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { PERMISSIONS } from "@ilumetech/types";
 import { ProductForm } from "@/components/products/ProductForm";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
@@ -8,7 +9,7 @@ export default function NewProductPage() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold m-0">Tambah Produk</h1>
       </div>
-      <PermissionGate permission="product:create">
+      <PermissionGate permission={PERMISSIONS.PRODUCT.CREATE}>
         <Suspense fallback={<div>Memuat...</div>}>
           <ProductForm mode="create" />
         </Suspense>

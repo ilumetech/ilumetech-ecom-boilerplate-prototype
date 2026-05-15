@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TableColumnsType, TablePaginationConfig } from 'antd';
 import type { SorterResult, FilterValue } from 'antd/es/table/interface';
 import type { AppUser } from '@ilumetech/types';
+import { PERMISSIONS } from '@ilumetech/types';
 import { userApi } from '@/lib/api/user';
 import { USER_LABELS } from '@/lib/labels/user';
 import type { UserQueryParams } from '@/lib/api/user';
@@ -123,7 +124,7 @@ export function UserTable() {
     <>
       <div className="flex justify-between mb-4">
         <Space>
-          <Can permission="user:invite">
+          <Can permission={PERMISSIONS.USER.INVITE}>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
               Tambah Pengguna
             </Button>
@@ -231,14 +232,14 @@ function buildTableColumns({ onEdit, onDelete }: ColumnBuilderParams): TableColu
       key: 'actions',
       render: (_: unknown, record: AppUser) => (
         <Space size="small" onClick={(e) => e.stopPropagation()}>
-          <Can permission="user:update">
+          <Can permission={PERMISSIONS.USER.UPDATE}>
             <Button
               type="text"
               icon={<EditOutlined />}
               onClick={() => onEdit(record)}
             />
           </Can>
-          <Can permission="user:delete">
+          <Can permission={PERMISSIONS.USER.DELETE}>
             <Button
               type="text"
               danger

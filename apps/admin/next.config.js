@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: [
+    '@ilumetech/types',
+    '@ilumetech/utils',
     'antd',
     '@ant-design',
     'rc-util',

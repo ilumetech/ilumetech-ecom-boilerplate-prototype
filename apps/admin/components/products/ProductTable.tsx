@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TableColumnsType, TablePaginationConfig } from "antd";
 import type { SorterResult } from "antd/es/table/interface";
 import type { Product } from "@ilumetech/types";
+import { PERMISSIONS } from "@ilumetech/types";
 import { productApi } from "@/lib/api/product";
 import type { ProductQueryParams } from "@/lib/api/product";
 import { PRODUCT_LABELS } from "@/lib/labels/product";
@@ -92,7 +93,7 @@ export function ProductTable() {
     <>
       <div className="flex justify-between mb-4">
         <Space>
-          <Can permission="product:create">
+          <Can permission={PERMISSIONS.PRODUCT.CREATE}>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -177,10 +178,10 @@ function buildColumns({ onEdit, onDelete }: ColumnParams): TableColumnsType<Prod
       key: "actions",
       render: (_: unknown, record: Product) => (
         <Space size="small" onClick={(e) => e.stopPropagation()}>
-          <Can permission="product:update">
+          <Can permission={PERMISSIONS.PRODUCT.UPDATE}>
             <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
           </Can>
-          <Can permission="product:delete">
+          <Can permission={PERMISSIONS.PRODUCT.DELETE}>
             <Button
               type="text"
               danger
