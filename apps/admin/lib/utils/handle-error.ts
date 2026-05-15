@@ -1,9 +1,21 @@
+import { type MessageInstance } from 'antd/es/message/interface';
 import { message } from 'antd';
+
+let staticMessage: MessageInstance | null = null;
+
+export function setStaticMessage(instance: MessageInstance) {
+  staticMessage = instance;
+}
 
 const FALLBACK = 'Terjadi kesalahan. Silakan coba lagi.';
 
 export function handleError(err: unknown): void {
-  message.error(extractErrorMessage(err));
+  const msg = extractErrorMessage(err);
+  if (staticMessage) {
+    staticMessage.error(msg);
+  } else {
+    message.error(msg);
+  }
 }
 
 function extractErrorMessage(err: unknown): string {

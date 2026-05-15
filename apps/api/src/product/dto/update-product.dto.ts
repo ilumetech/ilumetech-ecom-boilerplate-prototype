@@ -8,7 +8,19 @@ export class UpdateProductDto {
 
   @IsOptional()
   @IsString()
+  slug?: string;
+
+  @IsOptional()
+  @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  colorId?: string;
+
+  @IsOptional()
+  @IsString()
+  badge?: string;
 
   @IsOptional()
   @IsString()

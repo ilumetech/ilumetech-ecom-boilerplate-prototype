@@ -7,7 +7,19 @@ export class CreateProductDto {
 
   @IsOptional()
   @IsString()
+  slug?: string;
+
+  @IsOptional()
+  @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  colorId?: string;
+
+  @IsOptional()
+  @IsString()
+  badge?: string;
 
   @IsString()
   productCategoryId: string;

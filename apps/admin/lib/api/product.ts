@@ -8,12 +8,16 @@ export interface ProductQueryParams {
   sortField?: string;
   sortOrder?: 'asc' | 'desc';
   productCategoryId?: string;
+  colorId?: string;
   isActive?: boolean;
 }
 
 interface CreateProductPayload {
   name: string;
+  slug?: string;
   description?: string;
+  colorId?: string;
+  badge?: string;
   productCategoryId: string;
   unitId: string;
   sellingPrice: number;
@@ -21,15 +25,20 @@ interface CreateProductPayload {
   isActive?: boolean;
 }
 
+
 interface UpdateProductPayload {
   name?: string;
+  slug?: string;
   description?: string;
+  colorId?: string;
+  badge?: string;
   productCategoryId?: string;
   unitId?: string;
   sellingPrice?: number;
   purchasePrice?: number;
   isActive?: boolean;
 }
+
 
 async function getAll(params?: ProductQueryParams): Promise<PaginatedResponse<Product>> {
   const response = await apiClient.get<PaginatedResponse<Product>>('/products', { params });

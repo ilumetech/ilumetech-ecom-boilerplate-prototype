@@ -31,6 +31,12 @@ export const PERMISSIONS = {
   DASHBOARD: {
     VIEW_USER_STATS: 'dashboard:view_user_stats',
   },
+  COLOR: {
+    CREATE: 'color:create',
+    READ:   'color:read',
+    UPDATE: 'color:update',
+    DELETE: 'color:delete',
+  },
 } as const;
 
 export const ALL_PERMISSIONS: string[] = Object.values(PERMISSIONS).flatMap(

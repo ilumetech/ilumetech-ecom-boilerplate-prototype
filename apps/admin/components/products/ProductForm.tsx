@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   App,
@@ -14,16 +14,16 @@ import {
   Typography,
 } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { productApi } from "@/lib/api/product";
 import { productCategoryApi } from "@/lib/api/product-category";
+import { colorApi } from "@/lib/api/color";
 import { unitApi } from "@/lib/api/unit";
-import { PERMISSIONS } from "@ilumetech/types";
 import { PRODUCT_LABELS } from "@/lib/labels/product";
-import { handleError } from "@/lib/utils/handle-error";
 import { getDirtyFields } from "@/lib/utils/get-dirty-fields";
-import { Can } from "@/components/auth/Can";
-import { useCan } from "@/lib/hooks/use-can";
+import { slugify } from "@/lib/utils/string";
+import { handleError } from "@/lib/utils/handle-error";
+
 
 interface ProductFormProps {
   mode: "create" | "edit";
@@ -32,13 +32,17 @@ interface ProductFormProps {
 
 interface FormValues {
   name: string;
+  slug?: string;
   description?: string;
+  colorId?: string;
+  badge?: string;
   productCategoryId: string;
   unitId: string;
   sellingPrice: number;
   purchasePrice?: number;
   isActive: boolean;
 }
+
 
 const RUPIAH_FORMATTER = {
   formatter: (value: number | undefined) =>
@@ -47,9 +51,13 @@ const RUPIAH_FORMATTER = {
 };
 
 export function ProductForm({ mode, productId }: ProductFormProps) {
+  const queryClient = useQueryClient();
   const router = useRouter();
   const { message, modal } = App.useApp();
   const [form] = Form.useForm<FormValues>();
+  
+  const [categorySearch, setCategorySearch] = useState("");
+  const [colorwaySearch, setColorwaySearch] = useState("");
   const isEditMode = mode === "edit";
   const cancelTarget = isEditMode ? `/products/${productId}` : "/products";
 
@@ -63,24 +71,59 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     queryFn: unitApi.getAll,
   });
 
+  const { data: colorsData } = useQuery({
+    queryKey: ["colors", "list", { limit: 100 }],
+    queryFn: () => colorApi.getAll({ limit: 100 }),
+  });
+
   const { data: product } = useQuery({
     queryKey: ["products", "detail", productId],
     queryFn: () => productApi.getById(productId!),
     enabled: isEditMode,
   });
 
+  const buildOriginalValues = useCallback((): Partial<FormValues> => {
+    return {
+      name: product!.name,
+      slug: product!.slug,
+      description: product!.description ?? undefined,
+      colorId: product!.colorId ?? undefined,
+      badge: product!.badge ?? undefined,
+      productCategoryId: product!.productCategoryId,
+      unitId: product!.unitId,
+      sellingPrice: product!.sellingPrice,
+      purchasePrice: product!.purchasePrice ?? undefined,
+      isActive: product!.isActive,
+    };
+  }, [product]);
+
+  const isFormDirty = useCallback((): boolean => {
+    if (isEditMode && product) {
+      const currentValues = form.getFieldsValue();
+      return Object.keys(getDirtyFields(
+        currentValues as FormValues & Record<string, unknown>,
+        buildOriginalValues() as FormValues & Record<string, unknown>,
+      )).length > 0;
+    }
+    return form.isFieldsTouched();
+  }, [buildOriginalValues, form, isEditMode, product]);
+
   useEffect(() => {
     if (!product || !isEditMode) return;
     form.resetFields();
     form.setFieldsValue({
       name: product.name,
+      slug: product.slug,
       description: product.description ?? undefined,
+      colorId: product.colorId ?? undefined,
+      badge: product.badge ?? undefined,
       productCategoryId: product.productCategoryId,
       unitId: product.unitId,
       sellingPrice: product.sellingPrice,
       purchasePrice: product.purchasePrice ?? undefined,
       isActive: product.isActive,
     });
+
   }, [product, form, isEditMode]);
 
   useEffect(() => {
@@ -89,19 +132,23 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     }
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [form, product, isEditMode]);
+  }, [isFormDirty]);
 
   const createMutation = useMutation({
     mutationFn: (values: FormValues) =>
       productApi.create({
         name: values.name,
+        slug: values.slug,
         description: values.description,
+        colorId: values.colorId,
+        badge: values.badge,
         productCategoryId: values.productCategoryId,
         unitId: values.unitId,
         sellingPrice: values.sellingPrice,
         purchasePrice: values.purchasePrice,
         isActive: values.isActive,
       }),
+
     onSuccess: () => {
       message.success("Produk berhasil dibuat");
       router.push("/products");
@@ -119,42 +166,46 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     onError: handleError,
   });
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
-  const canViewCost = useCan(PERMISSIONS.PRODUCT.VIEW_COST);
+  const createCategoryMutation = useMutation({
+    mutationFn: (name: string) => productCategoryApi.create({ name }),
+    onSuccess: (response) => {
+      message.success(`Kategori "${response.data.name}" berhasil dibuat`);
+      queryClient.invalidateQueries({ queryKey: ["productCategories"] });
+      form.setFieldValue("productCategoryId", response.data.id);
+      setCategorySearch("");
+    },
+    onError: handleError,
+  });
 
-  function buildOriginalValues(): Partial<FormValues> {
-    return {
-      name: product!.name,
-      description: product!.description ?? undefined,
-      productCategoryId: product!.productCategoryId,
-      unitId: product!.unitId,
-      sellingPrice: product!.sellingPrice,
-      purchasePrice: product!.purchasePrice ?? undefined,
-      isActive: product!.isActive,
-    };
-  }
+  const createColorMutation = useMutation({
+    mutationFn: (name: string) => colorApi.create({ name }),
+    onSuccess: (response) => {
+      message.success(`Warna "${response.data.name}" berhasil dibuat`);
+      queryClient.invalidateQueries({ queryKey: ["colors"] });
+      form.setFieldValue("colorId", response.data.id);
+      setColorwaySearch("");
+    },
+    onError: handleError,
+  });
 
-  function isFormDirty(): boolean {
-    if (isEditMode && product) {
-      const currentValues = form.getFieldsValue();
-      return Object.keys(getDirtyFields(
-        currentValues as FormValues & Record<string, unknown>,
-        buildOriginalValues() as FormValues & Record<string, unknown>,
-      )).length > 0;
-    }
-    return form.isFieldsTouched();
-  }
+  const isPending =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    createCategoryMutation.isPending ||
+    createColorMutation.isPending;
 
   function handleFinish(values: FormValues) {
     if (!isEditMode) {
-      if (!canViewCost) delete values.purchasePrice;
       createMutation.mutate(values);
       return;
     }
     const dirtyFields = getDirtyFields(
       {
         name: values.name,
+        slug: values.slug,
         description: values.description,
+        colorId: values.colorId,
+        badge: values.badge,
         productCategoryId: values.productCategoryId,
         unitId: values.unitId,
         sellingPrice: values.sellingPrice,
@@ -163,7 +214,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       },
       buildOriginalValues(),
     );
-    if (!canViewCost) delete dirtyFields.purchasePrice;
+
     if (Object.keys(dirtyFields).length === 0) {
       message.info("Tidak ada perubahan");
       return;
@@ -186,10 +237,35 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     });
   }
 
-  const categoryOptions = (categoriesData?.data ?? []).map((c) => ({
-    label: c.name,
-    value: c.id,
-  }));
+  const categoryOptions = useMemo(() => {
+    const options = (categoriesData?.data ?? []).map((c) => ({
+      label: c.name,
+      value: c.id,
+    }));
+
+    if (categorySearch && !options.some(opt => opt.label.toLowerCase() === categorySearch.toLowerCase())) {
+      options.push({
+        label: `+ Tambah "${categorySearch}"`,
+        value: `CREATE_${categorySearch}`,
+      });
+    }
+    return options;
+  }, [categoriesData, categorySearch]);
+
+  const colorOptions = useMemo(() => {
+    const options = (colorsData?.data ?? []).map((c) => ({
+      label: c.name,
+      value: c.id,
+    }));
+
+    if (colorwaySearch && !options.some(opt => opt.label.toLowerCase() === colorwaySearch.toLowerCase())) {
+      options.push({
+        label: `+ Tambah "${colorwaySearch}"`,
+        value: `CREATE_${colorwaySearch}`,
+      });
+    }
+    return options;
+  }, [colorsData, colorwaySearch]);
 
   const unitOptions = (units ?? []).map((u) => ({
     label: `${u.name} (${u.abbreviation})`,
@@ -215,9 +291,50 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           <Input />
         </Form.Item>
 
+
+
+
         <Form.Item name="description" label={PRODUCT_LABELS.description}>
           <Input.TextArea rows={3} />
         </Form.Item>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Form.Item name="colorId" label={PRODUCT_LABELS.color}>
+            <Select
+              showSearch
+              placeholder="Pilih warna"
+              options={colorOptions}
+              onSearch={setColorwaySearch}
+              onSelect={(value) => {
+                const selectedValue = value.toString();
+                if (selectedValue.startsWith("CREATE_")) {
+                  const newName = selectedValue.replace("CREATE_", "");
+                  createColorMutation.mutate(newName);
+                } else {
+                  setColorwaySearch("");
+                }
+              }}
+              filterOption={(input, option) =>
+                (option?.label ?? "").toString().toLowerCase().includes(input.toLowerCase())
+              }
+              allowClear
+            />
+          </Form.Item>
+
+          <Form.Item name="badge" label={PRODUCT_LABELS.badge}>
+            <Select 
+              allowClear
+              options={[
+                { label: 'New Arrival', value: 'New Arrival' },
+                { label: 'Bestseller', value: 'Bestseller' },
+                { label: 'Limited Edition', value: 'Limited Edition' },
+                { label: 'On Sale', value: 'On Sale' },
+              ]}
+              placeholder="Pilih badge"
+            />
+          </Form.Item>
+        </div>
+
 
         <Form.Item
           name="productCategoryId"
@@ -228,6 +345,18 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
             options={categoryOptions}
             placeholder="Pilih kategori"
             showSearch
+            onSearch={setCategorySearch}
+            onSelect={(value) => {
+              if (value.toString().startsWith("CREATE_")) {
+                const newName = value.toString().replace("CREATE_", "");
+                createCategoryMutation.mutate(newName);
+              } else {
+                setCategorySearch("");
+              }
+            }}
+            filterOption={(input, option) =>
+              (option?.label ?? "").toString().toLowerCase().includes(input.toLowerCase())
+            }
           />
         </Form.Item>
 
@@ -253,17 +382,15 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           />
         </Form.Item>
 
-        <Can permission={PERMISSIONS.PRODUCT.VIEW_COST}>
-          <Form.Item name="purchasePrice" label={PRODUCT_LABELS.purchasePrice}>
-            <InputNumber
-              style={{ width: "100%" }}
-              prefix="Rp"
-              {...RUPIAH_FORMATTER}
-              min={0}
-              precision={0}
-            />
-          </Form.Item>
-        </Can>
+        <Form.Item name="purchasePrice" label={PRODUCT_LABELS.purchasePrice}>
+          <InputNumber
+            style={{ width: "100%" }}
+            prefix="Rp"
+            {...RUPIAH_FORMATTER}
+            min={0}
+            precision={0}
+          />
+        </Form.Item>
 
         <Form.Item
           name="isActive"

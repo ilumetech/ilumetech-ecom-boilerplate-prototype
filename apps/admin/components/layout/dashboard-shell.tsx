@@ -13,6 +13,7 @@ import {
   UnorderedListOutlined,
   TagsOutlined,
   TeamOutlined,
+  BgColorsOutlined,
 } from "@ant-design/icons";
 import { PERMISSIONS } from "@ilumetech/types";
 
@@ -51,6 +52,12 @@ const NAV_CONFIG: NavItemConfig[] = [
         label: "Kategori Produk",
         permission: PERMISSIONS.PRODUCT_CATEGORY.READ,
         icon: <TagsOutlined />,
+      },
+      {
+        key: "/colors",
+        label: "Warna",
+        permission: PERMISSIONS.COLOR.READ,
+        icon: <BgColorsOutlined />,
       },
     ],
   },

@@ -59,11 +59,20 @@ model Unit {
 model ProductCategory {
   id          String    @id @default(cuid())
   name        String    @unique
+  slug        String    @unique
   description String?
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   products    Product[]
+}
+
+model Color {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
 }
 
 model ProductCounter {
@@ -79,20 +88,69 @@ model SystemConfig {
 }
 
 model Product {
-  id                String          @id @default(cuid())
-  code              String          @unique
+  id                String           @id @default(cuid())
+  code              String           @unique
   name              String
+  slug              String           @unique
   description       String?
+  colorId           String?
+  color             Color?           @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  badge             String?
   productCategoryId String
-  productCategory   ProductCategory @relation(fields: [productCategoryId], references: [id])
+  productCategory   ProductCategory  @relation(fields: [productCategoryId], references: [id])
   unitId            String
-  unit              Unit            @relation(fields: [unitId], references: [id])
+  unit              Unit             @relation(fields: [unitId], references: [id])
   sellingPrice      Decimal
   purchasePrice     Decimal?
-  isActive          Boolean         @default(true)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  isActive          Boolean          @default(true)
+  images            ProductImage[]
+  variants          ProductVariant[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 }
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  url       String
+  alt       String?
+  sortOrder Int      @default(0)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attribute {
+  id        String           @id @default(cuid())
+  name      String           @unique
+  values    AttributeValue[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model AttributeValue {
+  id          String           @id @default(cuid())
+  value       String
+  meta        Json?            // For hex codes, etc.
+  attributeId String
+  attribute   Attribute        @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  variants    ProductVariant[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model ProductVariant {
+  id         String           @id @default(cuid())
+  sku        String           @unique
+  price      Decimal?         // Override base price
+  stock      Int              @default(0)
+  productId  String
+  product    Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributes AttributeValue[]
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+}
+
 
 enum AuditCategory {
   FINANCIAL

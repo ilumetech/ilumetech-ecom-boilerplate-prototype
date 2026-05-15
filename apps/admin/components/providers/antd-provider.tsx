@@ -1,6 +1,8 @@
 "use client";
 
 import { App, ConfigProvider } from "antd";
+import { useEffect } from "react";
+import { setStaticMessage } from "@/lib/utils/handle-error";
 
 const antdTheme = {
   token: {
@@ -20,10 +22,23 @@ const antdTheme = {
   },
 };
 
+function AntdAppBridge() {
+  const { message } = App.useApp();
+
+  useEffect(() => {
+    setStaticMessage(message);
+  }, [message]);
+
+  return null;
+}
+
 export function AntdProvider({ children }: { children: React.ReactNode }) {
   return (
     <ConfigProvider theme={antdTheme}>
-      <App>{children}</App>
+      <App>
+        <AntdAppBridge />
+        {children}
+      </App>
     </ConfigProvider>
   );
 }

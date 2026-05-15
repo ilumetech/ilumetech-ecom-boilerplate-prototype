@@ -36,10 +36,23 @@ export class UserService {
   // ─── Public CRUD ──────────────────────────────────────────────────────────
 
   async findMe(clerkUserId: string): Promise<AppUserMe> {
-    const user = await this.prisma.user.findUnique({
+    let user = await this.prisma.user.findUnique({
       where: { id: clerkUserId },
       include: { role: { include: { permissions: { include: { permission: true } } } } },
     });
+
+    // If user not in DB, sync from Clerk (this handles users who signed up before the DB sync was ready)
+    if (!user) {
+      const clerkUser = await this.callClerk(() => this.clerk.users.getUser(clerkUserId));
+      await this.syncClerkUserToPostgres(clerkUser);
+      
+      // Fetch again with permissions
+      user = await this.prisma.user.findUnique({
+        where: { id: clerkUserId },
+        include: { role: { include: { permissions: { include: { permission: true } } } } },
+      }) as UserWithRoleAndPermissions;
+    }
+
     if (!user) throw new NotFoundException(`User ${clerkUserId} not found`);
     return this.mapPrismaUserMe(user);
   }
@@ -160,6 +173,16 @@ export class UserService {
       (e) => e.id === clerkUser.primaryEmailAddressId,
     );
 
+    // Auto-assign admin role to the first user if no role is provided
+    let effectiveRoleId = roleId;
+    if (!effectiveRoleId) {
+      const userCount = await this.prisma.user.count();
+      if (userCount === 0) {
+        const adminRole = await this.prisma.role.findUnique({ where: { name: 'admin' } });
+        if (adminRole) effectiveRoleId = adminRole.id;
+      }
+    }
+
     const data = {
       email: primaryEmail?.emailAddress ?? '',
       username: clerkUser.username,
@@ -167,7 +190,7 @@ export class UserService {
       lastName: clerkUser.lastName,
       imageUrl: clerkUser.imageUrl,
       isActive: !clerkUser.banned,
-      ...(roleId !== undefined && { roleId }),
+      ...(effectiveRoleId !== undefined && { roleId: effectiveRoleId }),
     };
 
     return this.prisma.user.upsert({

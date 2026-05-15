@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { buildPaginationMeta, buildPrismaQuery } from '../common/utils';
+import { buildPaginationMeta, buildPrismaQuery, slugify } from '../common/utils';
 import type { PaginatedResponse, ProductCategory } from '@ilumetech/types';
 import type { CreateProductCategoryDto, ProductCategoryQueryDto, UpdateProductCategoryDto } from './dto';
 
 interface PrismaProductCategory {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   isActive: boolean;
   createdAt: Date;
@@ -51,9 +52,11 @@ export class ProductCategoryService {
   }
 
   async create(dto: CreateProductCategoryDto): Promise<ProductCategory> {
+    const slug = await this.generateUniqueSlug(dto.name);
     const category = await this.prisma.productCategory.create({
       data: {
         name: dto.name,
+        slug,
         description: dto.description,
         isActive: dto.isActive ?? true,
       },
@@ -63,14 +66,37 @@ export class ProductCategoryService {
   }
 
   async update(id: string, dto: UpdateProductCategoryDto): Promise<ProductCategory> {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
+    const data: any = { ...dto };
+
+    if (dto.name && dto.name !== existing.name && !dto.slug) {
+      data.slug = await this.generateUniqueSlug(dto.name, id);
+    }
 
     const category = await this.prisma.productCategory.update({
       where: { id },
-      data: dto,
+      data,
     });
 
     return this.mapToResponse(category);
+  }
+
+  private async generateUniqueSlug(name: string, currentId?: string): Promise<string> {
+    const baseSlug = slugify(name);
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (true) {
+      const existing = await this.prisma.productCategory.findFirst({
+        where: {
+          slug,
+          id: currentId ? { not: currentId } : undefined,
+        },
+      });
+
+      if (!existing) return slug;
+      slug = `${baseSlug}-${counter++}`;
+    }
   }
 
   async remove(id: string): Promise<void> {
@@ -82,6 +108,7 @@ export class ProductCategoryService {
     return {
       id: category.id,
       name: category.name,
+      slug: category.slug,
       description: category.description,
       isActive: category.isActive,
       createdAt: category.createdAt.toISOString(),
