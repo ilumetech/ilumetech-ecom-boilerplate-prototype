@@ -20,11 +20,20 @@ type ProductWithRelations = Prisma.ProductGetPayload<{
     color: true;
     unit: true;
     images: true;
+    options: {
+      include: {
+        values: true;
+      };
+    };
     variants: {
       include: {
-        attributes: {
+        optionValues: {
           include: {
-            attribute: true;
+            optionValue: {
+              include: {
+                option: true;
+              };
+            };
           };
         };
       };
@@ -37,11 +46,27 @@ const PRODUCT_INCLUDE = {
   color: true,
   unit: true,
   images: true,
+  options: {
+    include: {
+      values: {
+        orderBy: {
+          position: 'asc' as const,
+        },
+      },
+    },
+    orderBy: {
+      position: 'asc' as const,
+    },
+  },
   variants: {
     include: {
-      attributes: {
+      optionValues: {
         include: {
-          attribute: true,
+          optionValue: {
+            include: {
+              option: true,
+            },
+          },
         },
       },
     },
@@ -108,7 +133,7 @@ export class ProductService {
       const code = this.formatCode(counter.prefix, counter.lastSeq);
       const slug = await this.generateUniqueSlug(dto.name, tx);
 
-      return tx.product.create({
+      const product = await tx.product.create({
         data: {
           code,
           name: dto.name,
@@ -120,10 +145,74 @@ export class ProductService {
           unitId: dto.unitId,
           sellingPrice: dto.sellingPrice,
           purchasePrice: dto.purchasePrice,
+          weightGram: dto.weightGram,
           isActive: dto.isActive ?? true,
         },
+      });
+
+      const productId = product.id;
+      const tempIdMap: Record<string, string> = {};
+
+      // 1. Create Options and Values
+      if (dto.options) {
+        for (const opt of dto.options) {
+          const createdOpt = await tx.productOption.create({
+            data: {
+              productId,
+              name: opt.name,
+              position: opt.position ?? 0,
+            },
+          });
+
+          if (opt.values) {
+            for (const val of opt.values) {
+              const createdVal = await tx.productOptionValue.create({
+                data: {
+                  optionId: createdOpt.id,
+                  value: val.value,
+                  position: val.position ?? 0,
+                },
+              });
+              if (val.id) {
+                tempIdMap[val.id] = createdVal.id;
+              }
+            }
+          }
+        }
+      }
+
+      // 2. Create Variants
+      if (dto.variants) {
+        for (const v of dto.variants) {
+          const optionValueIds = [
+            ...(v.optionValueIds ?? []),
+            ...(v.tempOptionValueIds?.map((tid) => tempIdMap[tid]).filter((id): id is string => !!id) ?? []),
+          ];
+
+          await tx.productVariant.create({
+            data: {
+              productId,
+              sku: v.sku,
+              name: v.name,
+              price: v.price,
+              compareAtPrice: v.compareAtPrice,
+              imageUrl: v.imageUrl,
+              isDefault: v.isDefault ?? false,
+              isActive: v.isActive ?? true,
+              optionValues: {
+                create: optionValueIds.map((id) => ({ optionValueId: id })),
+              },
+            },
+          });
+        }
+      }
+
+      const result = await tx.product.findUnique({
+        where: { id: productId },
         include: PRODUCT_INCLUDE,
       });
+
+      return result as unknown as ProductWithRelations;
     });
 
     return this.mapToResponse(product);
@@ -131,16 +220,102 @@ export class ProductService {
 
   async update(id: string, dto: UpdateProductDto): Promise<Product> {
     const existing = await this.findOne(id);
-    const data: Prisma.ProductUncheckedUpdateInput = { ...dto };
+    const { options, variants, ...productData } = dto;
+    const data: Prisma.ProductUncheckedUpdateInput = { ...productData };
 
     if (dto.name && dto.name !== existing.name && !dto.slug) {
       data.slug = await this.generateUniqueSlug(dto.name, this.prisma, id);
     }
 
-    const product = await this.prisma.product.update({
-      where: { id },
-      data,
-      include: PRODUCT_INCLUDE,
+    const product = await this.prisma.$transaction(async (tx) => {
+      await tx.product.update({
+        where: { id },
+        data,
+      });
+
+      if (options) {
+        // Simple strategy: delete existing and recreate
+        await tx.productOption.deleteMany({ where: { productId: id } });
+
+        const tempIdMap: Record<string, string> = {};
+        for (const opt of options) {
+          const createdOpt = await tx.productOption.create({
+            data: {
+              productId: id,
+              name: opt.name,
+              position: opt.position ?? 0,
+            },
+          });
+
+          if (opt.values) {
+            for (const val of opt.values) {
+              const createdVal = await tx.productOptionValue.create({
+                data: {
+                  optionId: createdOpt.id,
+                  value: val.value,
+                  position: val.position ?? 0,
+                },
+              });
+              if (val.id) {
+                tempIdMap[val.id] = createdVal.id;
+              }
+            }
+          }
+        }
+
+        if (variants) {
+          await tx.productVariant.deleteMany({ where: { productId: id } });
+          for (const v of variants) {
+            const optionValueIds = [
+              ...(v.optionValueIds ?? []),
+              ...(v.tempOptionValueIds?.map((tid) => tempIdMap[tid]).filter((id): id is string => !!id) ?? []),
+            ];
+
+            await tx.productVariant.create({
+              data: {
+                productId: id,
+                sku: v.sku,
+                name: v.name,
+                price: v.price,
+                compareAtPrice: v.compareAtPrice,
+                imageUrl: v.imageUrl,
+                isDefault: v.isDefault ?? false,
+                isActive: v.isActive ?? true,
+                optionValues: {
+                  create: optionValueIds.map((ovId) => ({ optionValueId: ovId })),
+                },
+              },
+            });
+          }
+        }
+      } else if (variants) {
+        // If only variants provided
+        await tx.productVariant.deleteMany({ where: { productId: id } });
+        for (const v of variants) {
+          await tx.productVariant.create({
+            data: {
+              productId: id,
+              sku: v.sku,
+              name: v.name,
+              price: v.price,
+              compareAtPrice: v.compareAtPrice,
+              imageUrl: v.imageUrl,
+              isDefault: v.isDefault ?? false,
+              isActive: v.isActive ?? true,
+              optionValues: {
+                create: v.optionValueIds?.map((ovId) => ({ optionValueId: ovId })) ?? [],
+              },
+            },
+          });
+        }
+      }
+
+      const result = await tx.product.findUnique({
+        where: { id },
+        include: PRODUCT_INCLUDE,
+      });
+
+      return result as unknown as ProductWithRelations;
     });
 
     return this.mapToResponse(product);
@@ -186,7 +361,7 @@ export class ProductService {
       description: product.description,
       colorId: product.colorId,
       color: product.color
-        ? { id: product.color.id, name: product.color.name }
+        ? { id: product.color.id, name: product.color.name, hexCode: product.color.hexCode }
         : null,
       badge: product.badge,
       productCategoryId: product.productCategoryId,
@@ -204,6 +379,7 @@ export class ProductService {
       purchasePrice: product.purchasePrice
         ? product.purchasePrice.toNumber()
         : null,
+      weightGram: product.weightGram,
       isActive: product.isActive,
       images: product.images.map((img) => ({
         id: img.id,
@@ -212,25 +388,29 @@ export class ProductService {
         sortOrder: img.sortOrder,
         productId: img.productId,
       })),
+      options: product.options.map((opt) => ({
+        id: opt.id,
+        name: opt.name,
+        position: opt.position,
+        values: opt.values.map((v) => ({
+          id: v.id,
+          optionId: v.optionId,
+          value: v.value,
+          position: v.position,
+        })),
+      })),
       variants: product.variants.map((v) => ({
         id: v.id,
         sku: v.sku,
-        price: v.price ? v.price.toNumber() : null,
-        stock: v.stock,
-        productId: v.productId,
-        attributes: v.attributes.map((attr) => ({
-          id: attr.id,
-          value: attr.value,
-          meta: attr.meta,
-          attributeId: attr.attributeId,
-          attribute: {
-            id: attr.attribute.id,
-            name: attr.attribute.name,
-            createdAt: attr.attribute.createdAt.toISOString(),
-            updatedAt: attr.attribute.updatedAt.toISOString(),
-          },
-          createdAt: attr.createdAt.toISOString(),
-          updatedAt: attr.updatedAt.toISOString(),
+        name: v.name,
+        price: v.price.toNumber(),
+        compareAtPrice: v.compareAtPrice ? v.compareAtPrice.toNumber() : null,
+        imageUrl: v.imageUrl,
+        isDefault: v.isDefault,
+        isActive: v.isActive,
+        optionValues: v.optionValues.map((ov) => ({
+          optionName: ov.optionValue.option.name,
+          value: ov.optionValue.value,
         })),
       })),
       createdAt: product.createdAt.toISOString(),

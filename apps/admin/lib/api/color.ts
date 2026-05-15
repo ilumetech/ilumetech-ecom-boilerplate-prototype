@@ -11,10 +11,12 @@ export interface ColorQueryParams {
 
 interface CreateColorPayload {
   name: string;
+  hexCode?: string;
 }
 
 interface UpdateColorPayload {
   name?: string;
+  hexCode?: string;
 }
 
 async function getAll(params?: ColorQueryParams): Promise<PaginatedResponse<Color>> {

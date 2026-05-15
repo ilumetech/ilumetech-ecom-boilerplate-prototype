@@ -1,5 +1,7 @@
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CreateProductOptionDto } from './product-option.dto';
+import { CreateProductVariantDto } from './product-variant.dto';
 
 export class CreateProductDto {
   @IsString()
@@ -37,6 +39,23 @@ export class CreateProductDto {
   purchasePrice?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  weightGram?: number;
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductOptionDto)
+  options?: CreateProductOptionDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductVariantDto)
+  variants?: CreateProductVariantDto[];
 }

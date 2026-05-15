@@ -22,9 +22,11 @@ interface CreateProductPayload {
   unitId: string;
   sellingPrice: number;
   purchasePrice?: number;
+  weightGram?: number;
   isActive?: boolean;
+  options?: any[];
+  variants?: any[];
 }
-
 
 interface UpdateProductPayload {
   name?: string;
@@ -36,7 +38,10 @@ interface UpdateProductPayload {
   unitId?: string;
   sellingPrice?: number;
   purchasePrice?: number;
+  weightGram?: number;
   isActive?: boolean;
+  options?: any[];
+  variants?: any[];
 }
 
 

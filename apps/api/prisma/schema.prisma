@@ -70,6 +70,7 @@ model ProductCategory {
 model Color {
   id        String    @id @default(cuid())
   name      String    @unique
+  hexCode   String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   products  Product[]
@@ -102,8 +103,10 @@ model Product {
   unit              Unit             @relation(fields: [unitId], references: [id])
   sellingPrice      Decimal
   purchasePrice     Decimal?
+  weightGram        Int?
   isActive          Boolean          @default(true)
   images            ProductImage[]
+  options           ProductOption[]
   variants          ProductVariant[]
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
@@ -120,35 +123,55 @@ model ProductImage {
   updatedAt DateTime @updatedAt
 }
 
-model Attribute {
-  id        String           @id @default(cuid())
-  name      String           @unique
-  values    AttributeValue[]
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+model ProductOption {
+  id        String               @id @default(cuid())
+  productId String
+  product   Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int                  @default(0)
+  values    ProductOptionValue[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@unique([productId, name])
 }
 
-model AttributeValue {
-  id          String           @id @default(cuid())
-  value       String
-  meta        Json?            // For hex codes, etc.
-  attributeId String
-  attribute   Attribute        @relation(fields: [attributeId], references: [id], onDelete: Cascade)
-  variants    ProductVariant[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+model ProductOptionValue {
+  id        String                      @id @default(cuid())
+  optionId  String
+  option    ProductOption               @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  value     String
+  position  Int                         @default(0)
+  variants  ProductVariantOptionValue[]
+  createdAt DateTime                    @default(now())
+  updatedAt DateTime                    @updatedAt
+
+  @@unique([optionId, value])
 }
 
 model ProductVariant {
-  id         String           @id @default(cuid())
-  sku        String           @unique
-  price      Decimal?         // Override base price
-  stock      Int              @default(0)
-  productId  String
-  product    Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  attributes AttributeValue[]
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+  id             String                      @id @default(cuid())
+  productId      String
+  product        Product                     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku            String                      @unique
+  name           String
+  price          Decimal
+  compareAtPrice Decimal?
+  imageUrl       String?
+  isDefault      Boolean                     @default(false)
+  isActive       Boolean                     @default(true)
+  optionValues   ProductVariantOptionValue[]
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+}
+
+model ProductVariantOptionValue {
+  variantId     String
+  variant       ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValueId String
+  optionValue   ProductOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, optionValueId])
 }
 
 

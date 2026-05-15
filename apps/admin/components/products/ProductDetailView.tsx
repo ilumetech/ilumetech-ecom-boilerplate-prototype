@@ -86,6 +86,34 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
         <Descriptions.Item label={PRODUCT_LABELS.productCategory}>
           {product.productCategory.name}
         </Descriptions.Item>
+        <Descriptions.Item label={PRODUCT_LABELS.color}>
+          <Space>
+            {product.color?.hexCode && (
+              <div 
+                style={{ 
+                  width: 14, 
+                  height: 14, 
+                  borderRadius: '50%', 
+                  backgroundColor: product.color.hexCode,
+                  border: '1px solid #d9d9d9'
+                }} 
+              />
+            )}
+            {product.color?.name ?? "—"}
+          </Space>
+        </Descriptions.Item>
+        <Descriptions.Item label={PRODUCT_LABELS.badge}>
+          {product.badge ? (
+            <Tag color={
+              product.badge === "New Arrival" ? "green" :
+              product.badge === "Bestseller" ? "gold" :
+              product.badge === "Limited Edition" ? "purple" :
+              product.badge === "On Sale" ? "red" : "blue"
+            }>
+              {product.badge}
+            </Tag>
+          ) : "—"}
+        </Descriptions.Item>
         <Descriptions.Item label={PRODUCT_LABELS.unit}>
           {product.unit.name} ({product.unit.abbreviation})
         </Descriptions.Item>
@@ -97,6 +125,9 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
             {product.purchasePrice !== null ? formatRupiah(product.purchasePrice) : "—"}
           </Descriptions.Item>
         )}
+        <Descriptions.Item label={PRODUCT_LABELS.weightGram}>
+          {product.weightGram !== null ? `${product.weightGram} gram` : "—"}
+        </Descriptions.Item>
         <Descriptions.Item label={PRODUCT_LABELS.isActive}>
           {product.isActive ? (
             <Tag color="green">Aktif</Tag>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Descriptions, Modal, Spin } from "antd";
+import { Button, Descriptions, Modal, Space, Spin } from "antd";
 import { EditOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import type { Color } from "@ilumetech/types";
@@ -56,6 +56,22 @@ export function ColorDetailModal({
       {color && (
         <Descriptions column={1} bordered>
           <Descriptions.Item label={COLOR_LABELS.name}>{color.name}</Descriptions.Item>
+          <Descriptions.Item label={COLOR_LABELS.hexCode}>
+            <Space>
+              {color.hexCode && (
+                <div 
+                  style={{ 
+                    width: 16, 
+                    height: 16, 
+                    borderRadius: 4, 
+                    backgroundColor: color.hexCode,
+                    border: '1px solid #d9d9d9'
+                  }} 
+                />
+              )}
+              {color.hexCode ?? "—"}
+            </Space>
+          </Descriptions.Item>
           <Descriptions.Item label={COLOR_LABELS.createdAt}>
             {new Date(color.createdAt).toLocaleDateString("id-ID")}
           </Descriptions.Item>

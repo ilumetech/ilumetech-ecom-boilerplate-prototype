@@ -9,6 +9,7 @@ export const PRODUCT_LABELS = {
   unit: 'Satuan',
   sellingPrice: 'Harga Jual',
   purchasePrice: 'Harga Beli',
+  weightGram: 'Berat (gram)',
   isActive: 'Status Aktif',
   createdAt: 'Dibuat',
 

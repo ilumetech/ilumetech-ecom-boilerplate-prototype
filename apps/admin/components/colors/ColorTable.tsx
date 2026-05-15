@@ -188,6 +188,22 @@ function buildTableColumns({ onEdit, onDelete }: ColumnBuilderParams): TableColu
       dataIndex: "name",
       key: "name",
       sorter: true,
+      render: (name: string, record: Color) => (
+        <Space>
+          {record.hexCode && (
+            <div 
+              style={{ 
+                width: 16, 
+                height: 16, 
+                borderRadius: 4, 
+                backgroundColor: record.hexCode,
+                border: '1px solid #d9d9d9'
+              }} 
+            />
+          )}
+          {name}
+        </Space>
+      ),
     },
     {
       title: "Aksi",

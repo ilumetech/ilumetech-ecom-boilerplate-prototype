@@ -153,6 +153,40 @@ function buildColumns({ onEdit, onDelete }: ColumnParams): TableColumnsType<Prod
       sorter: true,
     },
     {
+      title: PRODUCT_LABELS.color,
+      key: "color",
+      render: (_: unknown, record: Product) => (
+        <Space>
+          {record.color?.hexCode && (
+            <div 
+              style={{ 
+                width: 14, 
+                height: 14, 
+                borderRadius: '50%', 
+                backgroundColor: record.color.hexCode,
+                border: '1px solid #d9d9d9'
+              }} 
+            />
+          )}
+          {record.color?.name ?? "—"}
+        </Space>
+      ),
+    },
+    {
+      title: PRODUCT_LABELS.badge,
+      dataIndex: "badge",
+      key: "badge",
+      render: (badge: string | null) => {
+        if (!badge) return "—";
+        let color = "blue";
+        if (badge === "New Arrival") color = "green";
+        if (badge === "Bestseller") color = "gold";
+        if (badge === "Limited Edition") color = "purple";
+        if (badge === "On Sale") color = "red";
+        return <Tag color={color}>{badge}</Tag>;
+      },
+    },
+    {
       title: PRODUCT_LABELS.productCategory,
       key: "productCategory",
       render: (_: unknown, record: Product) => record.productCategory.name ?? "—",

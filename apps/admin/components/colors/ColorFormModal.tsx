@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { App, Button, Form, Input, Modal } from "antd";
+import { App, Button, ColorPicker, Form, Input, Modal } from "antd";
 import { useMutation } from "@tanstack/react-query";
 import type { Color } from "@ilumetech/types";
 import { colorApi } from "@/lib/api/color";
@@ -19,6 +19,7 @@ interface ColorFormModalProps {
 
 interface FormValues {
   name: string;
+  hexCode?: string;
 }
 
 export function ColorFormModal({
@@ -35,14 +36,20 @@ export function ColorFormModal({
   useEffect(() => {
     if (!open) return;
     if (isEditMode && editTarget) {
-      form.setFieldsValue({ name: editTarget.name });
+      form.setFieldsValue({ 
+        name: editTarget.name,
+        hexCode: editTarget.hexCode ?? undefined 
+      });
       return;
     }
     form.resetFields();
   }, [open, isEditMode, editTarget, form]);
 
   const createMutation = useMutation({
-    mutationFn: (values: FormValues) => colorApi.create({ name: values.name }),
+    mutationFn: (values: FormValues) => colorApi.create({ 
+      name: values.name,
+      hexCode: values.hexCode 
+    }),
     onSuccess: () => {
       message.success("Warna berhasil dibuat");
       onSuccess();
@@ -68,7 +75,10 @@ export function ColorFormModal({
       return;
     }
 
-    const dirtyFields = getDirtyFields({ name: values.name }, { name: editTarget!.name });
+    const dirtyFields = getDirtyFields(
+      { name: values.name, hexCode: values.hexCode }, 
+      { name: editTarget!.name, hexCode: editTarget!.hexCode ?? undefined }
+    );
     if (Object.keys(dirtyFields).length === 0) {
       message.info("Tidak ada perubahan");
       return;
@@ -120,6 +130,14 @@ export function ColorFormModal({
           rules={[{ required: true, message: "Nama warna wajib diisi" }]}
         >
           <Input />
+        </Form.Item>
+
+        <Form.Item
+          name="hexCode"
+          label={COLOR_LABELS.hexCode}
+          getValueFromEvent={(color) => (typeof color === 'string' ? color : color.toHexString())}
+        >
+          <ColorPicker showText />
         </Form.Item>
       </Form>
     </Modal>

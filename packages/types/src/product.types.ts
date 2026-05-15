@@ -1,5 +1,3 @@
-import { AttributeValue } from './attribute.types';
-
 export interface ProductCategoryRef {
   id: string;
   name: string;
@@ -8,6 +6,7 @@ export interface ProductCategoryRef {
 export interface ColorRef {
   id: string;
   name: string;
+  hexCode: string | null;
 }
 
 export interface UnitRef {
@@ -24,13 +23,35 @@ export interface ProductImage {
   productId: string;
 }
 
+export interface ProductOptionValue {
+  id: string;
+  optionId: string;
+  value: string;
+  position: number;
+}
+
+export interface ProductOption {
+  id: string;
+  name: string;
+  position: number;
+  values: ProductOptionValue[];
+}
+
+export interface ProductVariantOptionValue {
+  optionName: string;
+  value: string;
+}
+
 export interface ProductVariant {
   id: string;
   sku: string;
-  price: number | null;
-  stock: number;
-  productId: string;
-  attributes: AttributeValue[];
+  name: string;
+  price: number;
+  compareAtPrice: number | null;
+  imageUrl: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  optionValues: ProductVariantOptionValue[];
 }
 
 export interface Product {
@@ -48,8 +69,10 @@ export interface Product {
   unit: UnitRef;
   sellingPrice: number;
   purchasePrice: number | null;
+  weightGram: number | null;
   isActive: boolean;
   images?: ProductImage[];
+  options?: ProductOption[];
   variants?: ProductVariant[];
   createdAt: string;
   updatedAt: string;

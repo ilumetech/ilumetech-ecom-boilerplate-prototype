@@ -7,6 +7,7 @@ import type { ColorQueryDto, CreateColorDto, UpdateColorDto } from './dto';
 interface PrismaColor {
   id: string;
   name: string;
+  hexCode: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,7 +49,10 @@ export class ColorService {
 
   async create(dto: CreateColorDto): Promise<Color> {
     const color = await this.prisma.color.create({
-      data: { name: dto.name },
+      data: { 
+        name: dto.name,
+        hexCode: dto.hexCode,
+      },
     });
 
     return this.mapToResponse(color);
@@ -74,6 +78,7 @@ export class ColorService {
     return {
       id: color.id,
       name: color.name,
+      hexCode: color.hexCode,
       createdAt: color.createdAt.toISOString(),
       updatedAt: color.updatedAt.toISOString(),
     };
