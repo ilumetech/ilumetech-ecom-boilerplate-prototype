@@ -8,7 +8,7 @@ import { PERMISSIONS } from "@ilumetech/types";
 import { productApi } from "@/lib/api/product";
 import { PRODUCT_LABELS } from "@/lib/labels/product";
 import { handleError } from "@/lib/utils/handle-error";
-import { Can } from "@/components/auth/Can";
+import { useCan } from "@/lib/hooks/use-can";
 
 function formatRupiah(value: number): string {
   return new Intl.NumberFormat("id-ID", {
@@ -26,6 +26,7 @@ interface ProductDetailViewProps {
 export function ProductDetailView({ productId }: ProductDetailViewProps) {
   const router = useRouter();
   const { message } = App.useApp();
+  const canViewCost = useCan(PERMISSIONS.PRODUCT.VIEW_COST);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ["products", "detail", productId],
@@ -91,11 +92,11 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
         <Descriptions.Item label={PRODUCT_LABELS.sellingPrice}>
           {formatRupiah(product.sellingPrice)}
         </Descriptions.Item>
-        <Can permission={PERMISSIONS.PRODUCT.VIEW_COST}>
+        {canViewCost && (
           <Descriptions.Item label={PRODUCT_LABELS.purchasePrice}>
             {product.purchasePrice !== null ? formatRupiah(product.purchasePrice) : "—"}
           </Descriptions.Item>
-        </Can>
+        )}
         <Descriptions.Item label={PRODUCT_LABELS.isActive}>
           {product.isActive ? (
             <Tag color="green">Aktif</Tag>

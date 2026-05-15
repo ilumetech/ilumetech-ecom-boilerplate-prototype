@@ -49,6 +49,7 @@ apps/admin/
 - Use Antd message/notification for all toast feedback
 - Never build custom components for things Antd already covers
 - Configure Antd theme globally in app/layout.tsx via ConfigProvider — never override per component
+- Never wrap Antd compound children (Descriptions.Item, Form.Item, Menu.Item, Table.Column) with <Can> — use useCan() with conditional rendering instead
 
 ## Antd Table + TanStack Query Pattern
 const [filters, setFilters] = useState({ page: 1, limit: 10, search: '' })
