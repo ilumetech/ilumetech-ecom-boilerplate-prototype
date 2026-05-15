@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { PrismaModule } from './common/prisma/prisma.module';
-import { AuditInterceptor } from './common/interceptors';
+import { AuditInterceptor, SensitiveFieldsInterceptor } from './common/interceptors';
 import { UserModule } from './user/user.module';
 import { RoleModule } from './role/role.module';
 import { AuthModule } from './auth/auth.module';
@@ -29,6 +29,10 @@ import { AuditLogModule } from './audit-log/audit-log.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: AuditInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: SensitiveFieldsInterceptor,
     },
   ],
 })
