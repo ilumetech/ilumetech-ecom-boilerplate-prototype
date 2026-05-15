@@ -14,6 +14,7 @@ import {
   TagsOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { PERMISSIONS } from "@ilumetech/types";
 
 const { Sider, Header, Content } = Layout;
 
@@ -36,19 +37,19 @@ const NAV_CONFIG: NavItemConfig[] = [
   {
     key: "products-group",
     label: "Produk",
-    permission: "product:read",
+    permission: PERMISSIONS.PRODUCT.READ,
     icon: <ShoppingOutlined />,
     children: [
       {
         key: "/products",
         label: "Daftar Produk",
-        permission: "product:read",
+        permission: PERMISSIONS.PRODUCT.READ,
         icon: <UnorderedListOutlined />,
       },
       {
         key: "/product-categories",
         label: "Kategori Produk",
-        permission: "product-category:read",
+        permission: PERMISSIONS.PRODUCT_CATEGORY.READ,
         icon: <TagsOutlined />,
       },
     ],
@@ -62,7 +63,7 @@ const NAV_CONFIG: NavItemConfig[] = [
   {
     key: "/users",
     label: "Tim",
-    permission: "user:read",
+    permission: PERMISSIONS.USER.READ,
     icon: <TeamOutlined />,
   },
 ];
