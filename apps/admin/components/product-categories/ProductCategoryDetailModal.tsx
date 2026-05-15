@@ -36,7 +36,7 @@ export function ProductCategoryDetailModal({
     <Button key="close" onClick={onClose}>
       Tutup
     </Button>,
-    <Can permission={PERMISSIONS.PRODUCT_CATEGORY.UPDATE}>
+    <Can key="edit" permission={PERMISSIONS.PRODUCT_CATEGORY.UPDATE}>
       <Button type="primary" onClick={handleEditClick} disabled={!category}>
         Edit
       </Button>
