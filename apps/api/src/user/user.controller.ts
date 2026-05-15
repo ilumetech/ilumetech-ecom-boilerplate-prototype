@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } f
 import { AuditCategory } from '@prisma/client';
 import { ClerkAuthGuard, PermissionsGuard } from '../common/guards';
 import { Audit, GetCurrentUser, Permissions } from '../common/decorators';
+import { PERMISSIONS } from '../common/constants';
 import { UserService } from './user.service';
 import { AssignRoleDto, InviteUserDto, UpdateUserDto, UserQueryDto } from './dto';
 
@@ -12,7 +13,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @Permissions('user:read')
+  @Permissions(PERMISSIONS.USER.READ)
   findAll(@Query() query: UserQueryDto) {
     return this.userService.findAll(query);
   }
@@ -25,43 +26,43 @@ export class UserController {
   }
 
   @Get(':id')
-  @Permissions('user:read')
+  @Permissions(PERMISSIONS.USER.READ)
   findOne(@Param('id') id: string) {
     return this.userService.findOne(id);
   }
 
   @Post('invite')
-  @Permissions('user:invite')
+  @Permissions(PERMISSIONS.USER.INVITE)
   create(@Body() dto: InviteUserDto) {
     return this.userService.create(dto);
   }
 
   @Patch(':id')
-  @Permissions('user:update')
+  @Permissions(PERMISSIONS.USER.UPDATE)
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.userService.update(id, dto);
   }
 
   @Delete(':id')
-  @Permissions('user:delete')
+  @Permissions(PERMISSIONS.USER.DELETE)
   remove(@Param('id') id: string) {
     return this.userService.remove(id);
   }
 
   @Get(':id/roles')
-  @Permissions('user:read')
+  @Permissions(PERMISSIONS.USER.READ)
   getUserRoles(@Param('id') id: string) {
     return this.userService.getUserRoles(id);
   }
 
   @Post(':id/roles')
-  @Permissions('user:update')
+  @Permissions(PERMISSIONS.USER.UPDATE)
   assignRole(@Param('id') id: string, @Body() dto: AssignRoleDto) {
     return this.userService.assignRole(id, dto);
   }
 
   @Delete(':id/roles/:roleId')
-  @Permissions('user:update')
+  @Permissions(PERMISSIONS.USER.UPDATE)
   removeRole(@Param('id') id: string, @Param('roleId') roleId: string) {
     return this.userService.removeRole(id, roleId);
   }

@@ -16,8 +16,8 @@ export const PERMISSIONS = {
     READ:         'product:read',
     UPDATE:       'product:update',
     DELETE:       'product:delete',
-    VIEW_COST:    'product:view-cost',
-    VIEW_PRICING: 'product:view-pricing',
+    VIEW_COST:    'product:view_cost',
+    VIEW_PRICING: 'product:view_pricing',
   },
   PRODUCT_CATEGORY: {
     CREATE: 'product-category:create',
@@ -25,17 +25,8 @@ export const PERMISSIONS = {
     UPDATE: 'product-category:update',
     DELETE: 'product-category:delete',
   },
-  STOCK: {
-    CREATE: 'stock:create',
-    READ:   'stock:read',
-    UPDATE: 'stock:update',
-    DELETE: 'stock:delete',
-  },
-  ORDER: {
-    CREATE: 'order:create',
-    READ:   'order:read',
-    UPDATE: 'order:update',
-    DELETE: 'order:delete',
+  AUDIT_LOG: {
+    READ: 'audit-log:read',
   },
 } as const;
 

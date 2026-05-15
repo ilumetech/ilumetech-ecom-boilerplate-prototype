@@ -14,31 +14,31 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Get()
-  @Permissions('product:read')
+  @Permissions(PERMISSIONS.PRODUCT.READ)
   findAll(@Query() query: QueryProductDto) {
     return this.productService.findAll(query);
   }
 
   @Get(':id')
-  @Permissions('product:read')
+  @Permissions(PERMISSIONS.PRODUCT.READ)
   findOne(@Param('id') id: string) {
     return this.productService.findOne(id);
   }
 
   @Post()
-  @Permissions('product:create')
+  @Permissions(PERMISSIONS.PRODUCT.CREATE)
   create(@Body() dto: CreateProductDto) {
     return this.productService.create(dto);
   }
 
   @Patch(':id')
-  @Permissions('product:update')
+  @Permissions(PERMISSIONS.PRODUCT.UPDATE)
   update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
     return this.productService.update(id, dto);
   }
 
   @Delete(':id')
-  @Permissions('product:delete')
+  @Permissions(PERMISSIONS.PRODUCT.DELETE)
   remove(@Param('id') id: string) {
     return this.productService.remove(id);
   }
