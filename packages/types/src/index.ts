@@ -5,3 +5,5 @@ export * from './query.types';
 export * from './role.types';
 export * from './unit.types';
 export * from './user.types';
+export * from './constants/permissions.constant';
+export * from './constants/roles.constant';

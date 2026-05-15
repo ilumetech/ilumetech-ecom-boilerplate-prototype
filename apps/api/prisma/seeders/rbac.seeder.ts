@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { ALL_PERMISSIONS } from '../../src/common/constants/permissions.constant';
-import { BASE_ROLE_DEFINITIONS, BASE_ROLES } from '../../src/common/constants/roles.constant';
+import { ALL_PERMISSIONS, BASE_ROLE_DEFINITIONS, BASE_ROLES } from '@ilumetech/types';
 
 async function upsertPermissions(prisma: PrismaClient): Promise<void> {
   for (const action of ALL_PERMISSIONS) {

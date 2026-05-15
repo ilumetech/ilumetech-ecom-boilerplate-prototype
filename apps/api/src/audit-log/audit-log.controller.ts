@@ -1,7 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ClerkAuthGuard, PermissionsGuard } from '../common/guards';
 import { Permissions } from '../common/decorators';
-import { PERMISSIONS } from '../common/constants';
+import { PERMISSIONS } from '@ilumetech/types';
 import { AuditLogService } from './audit-log.service';
 import { QueryAuditLogDto } from './dto';
 

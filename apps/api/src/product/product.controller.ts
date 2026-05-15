@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } f
 import { AuditCategory } from '@prisma/client';
 import { ClerkAuthGuard, PermissionsGuard } from '../common/guards';
 import { Audit, Permissions, SensitiveFields } from '../common/decorators';
-import { PERMISSIONS } from '../common/constants/permissions.constant';
+import { PERMISSIONS } from '@ilumetech/types';
 import { ProductService } from './product.service';
 import { CreateProductDto, QueryProductDto, UpdateProductDto } from './dto';
 
