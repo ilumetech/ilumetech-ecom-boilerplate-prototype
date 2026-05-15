@@ -28,6 +28,9 @@ export const PERMISSIONS = {
   AUDIT_LOG: {
     READ: 'audit-log:read',
   },
+  DASHBOARD: {
+    VIEW_USER_STATS: 'dashboard:view_user_stats',
+  },
 } as const;
 
 export const ALL_PERMISSIONS: string[] = Object.values(PERMISSIONS).flatMap(

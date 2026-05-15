@@ -11,6 +11,7 @@ import { ProductCategoryModule } from './product-category/product-category.modul
 import { ProductModule } from './product/product.module';
 import { UnitModule } from './unit/unit.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AuditLogModule } from './audit-log/audit-log.module';
     ProductModule,
     UnitModule,
     AuditLogModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [
