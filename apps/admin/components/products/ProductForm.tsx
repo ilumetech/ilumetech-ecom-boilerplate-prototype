@@ -18,9 +18,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { productApi } from "@/lib/api/product";
 import { productCategoryApi } from "@/lib/api/product-category";
 import { unitApi } from "@/lib/api/unit";
+import { PERMISSIONS } from "@ilumetech/types";
 import { PRODUCT_LABELS } from "@/lib/labels/product";
 import { handleError } from "@/lib/utils/handle-error";
 import { getDirtyFields } from "@/lib/utils/get-dirty-fields";
+import { Can } from "@/components/auth/Can";
+import { useCan } from "@/lib/hooks/use-can";
 
 interface ProductFormProps {
   mode: "create" | "edit";
@@ -117,6 +120,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const canViewCost = useCan(PERMISSIONS.PRODUCT.VIEW_COST);
 
   function buildOriginalValues(): Partial<FormValues> {
     return {
@@ -143,6 +147,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
   function handleFinish(values: FormValues) {
     if (!isEditMode) {
+      if (!canViewCost) delete values.purchasePrice;
       createMutation.mutate(values);
       return;
     }
@@ -158,6 +163,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       },
       buildOriginalValues(),
     );
+    if (!canViewCost) delete dirtyFields.purchasePrice;
     if (Object.keys(dirtyFields).length === 0) {
       message.info("Tidak ada perubahan");
       return;
@@ -247,15 +253,17 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           />
         </Form.Item>
 
-        <Form.Item name="purchasePrice" label={PRODUCT_LABELS.purchasePrice}>
-          <InputNumber
-            style={{ width: "100%" }}
-            prefix="Rp"
-            {...RUPIAH_FORMATTER}
-            min={0}
-            precision={0}
-          />
-        </Form.Item>
+        <Can permission={PERMISSIONS.PRODUCT.VIEW_COST}>
+          <Form.Item name="purchasePrice" label={PRODUCT_LABELS.purchasePrice}>
+            <InputNumber
+              style={{ width: "100%" }}
+              prefix="Rp"
+              {...RUPIAH_FORMATTER}
+              min={0}
+              precision={0}
+            />
+          </Form.Item>
+        </Can>
 
         <Form.Item
           name="isActive"

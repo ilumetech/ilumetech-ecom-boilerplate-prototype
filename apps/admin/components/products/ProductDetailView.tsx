@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { App, Button, Descriptions, Space, Spin, Tag, Typography } from "antd";
 import { ArrowLeftOutlined, EditOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
+import { PERMISSIONS } from "@ilumetech/types";
 import { productApi } from "@/lib/api/product";
 import { PRODUCT_LABELS } from "@/lib/labels/product";
 import { handleError } from "@/lib/utils/handle-error";
+import { Can } from "@/components/auth/Can";
 
 function formatRupiah(value: number): string {
   return new Intl.NumberFormat("id-ID", {
@@ -89,9 +91,11 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
         <Descriptions.Item label={PRODUCT_LABELS.sellingPrice}>
           {formatRupiah(product.sellingPrice)}
         </Descriptions.Item>
-        <Descriptions.Item label={PRODUCT_LABELS.purchasePrice}>
-          {product.purchasePrice !== null ? formatRupiah(product.purchasePrice) : "—"}
-        </Descriptions.Item>
+        <Can permission={PERMISSIONS.PRODUCT.VIEW_COST}>
+          <Descriptions.Item label={PRODUCT_LABELS.purchasePrice}>
+            {product.purchasePrice !== null ? formatRupiah(product.purchasePrice) : "—"}
+          </Descriptions.Item>
+        </Can>
         <Descriptions.Item label={PRODUCT_LABELS.isActive}>
           {product.isActive ? (
             <Tag color="green">Aktif</Tag>
