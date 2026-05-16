@@ -15,6 +15,7 @@ import {
   Select,
   Space,
   Switch,
+  Table,
   Tag,
   Typography,
   Upload,
@@ -24,7 +25,17 @@ import {
   ArrowLeftOutlined,
   DeleteOutlined,
   PlusOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
+import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { productApi } from "@/lib/api/product";
 import { productCategoryApi } from "@/lib/api/product-category";
@@ -106,6 +117,52 @@ function cartesianProduct<T>(arrays: T[][]): T[][] {
   );
 }
 
+const getBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+
+interface DraggableUploadListItemProps {
+  originNode: React.ReactElement;
+  file: UploadFile;
+  isFirst: boolean;
+}
+
+const DraggableUploadListItem = ({ originNode, file, isFirst }: DraggableUploadListItemProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: file.uid,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    cursor: 'move',
+    position: 'relative',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={isDragging ? 'z-50' : ''}
+      {...attributes}
+      {...listeners}
+    >
+      {isFirst && file.status === "done" && (
+        <div className="absolute top-1 left-1 z-20">
+          <Tag color="blue" className="m-0 text-[10px] font-bold uppercase shadow-sm">
+            Utama
+          </Tag>
+        </div>
+      )}
+      {originNode}
+    </div>
+  );
+};
+
 function parseSizeRun(input: string): FormOptionValue[] {
   if (!input) return [];
 
@@ -167,6 +224,46 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   const [colorPrices, setColorPrices] = useState<Record<string, number>>({});
   const [variantImages, setVariantImages] = useState<Record<string, string>>({});
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState("");
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+  );
+
+  const handlePreview = async (file: UploadFile) => {
+    if (!file.url && !file.preview) {
+      file.preview = await getBase64(file.originFileObj as File);
+    }
+    setPreviewImage(file.url || (file.preview as string));
+    setPreviewOpen(true);
+  };
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (active.id !== over?.id) {
+      const oldIndex = fileList.findIndex((item) => item.uid === active.id);
+      const newIndex = fileList.findIndex((item) => item.uid === over?.id);
+      const newFileList = arrayMove(fileList, oldIndex, newIndex);
+      
+      setFileList(newFileList);
+      
+      // Update form values
+      const images = newFileList
+        .filter((file) => file.status === "done")
+        .map((file, index) => ({
+          url: file.url || (file.response as any)?.url,
+          alt: file.name,
+          sortOrder: index,
+        }));
+      
+      form.setFieldValue("images", images);
+    }
+  };
 
   const handleUpload = async (options: any) => {
     const { onSuccess, onError, file } = options;
@@ -300,6 +397,12 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   }, [product]);
 
   useEffect(() => {
+    if (isEditMode && product) {
+      form.setFieldsValue(buildOriginalValues());
+    }
+  }, [isEditMode, product, form, buildOriginalValues]);
+
+  useEffect(() => {
     if (isEditMode && product?.variants) {
       const images: Record<string, string> = {};
       product.variants.forEach((v) => {
@@ -379,11 +482,13 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
     const allOptionsHaveValues = processedOptions.every(
       (opt) =>
+        opt &&
         opt.name &&
         opt.values &&
         opt.values.length > 0 &&
         opt.values.every(
           (val) =>
+            val &&
             val.label &&
             typeof val.label === "string" &&
             val.label.trim() !== "",
@@ -486,6 +591,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     });
 
     form.setFieldValue("variants", newVariants);
+    setSelectedRowKeys([]);
   }, [
     hasVariants,
     watchOptions,
@@ -618,16 +724,19 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           }),
         };
       }),
-      variants: values.variants?.map((v) => ({
-        sku: v.sku,
-        name: v.name,
-        price: v.price,
-        compareAtPrice: v.compareAtPrice,
-        isDefault: v.isDefault,
-        isActive: v.isActive,
-        imageUrl: v.imageUrl,
-        tempOptionValueIds: v.tempOptionValueIds,
-      })),
+      variants: values.variants?.map((v, index) => {
+        const currentVariant = form.getFieldValue(["variants", index]);
+        return {
+          sku: v.sku,
+          name: v.name || currentVariant?.name || "",
+          price: v.price,
+          compareAtPrice: v.compareAtPrice,
+          isDefault: v.isDefault,
+          isActive: v.isActive,
+          imageUrl: v.imageUrl || currentVariant?.imageUrl,
+          tempOptionValueIds: v.tempOptionValueIds || currentVariant?.tempOptionValueIds,
+        };
+      }),
     };
 
     if (!isEditMode) {
@@ -840,7 +949,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                   />
                 </Form.Item>
 
-                <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-x-4 md:grid-cols-3">
                   <Form.Item
                     name="productCategoryId"
                     label={PRODUCT_LABELS.productCategory}
@@ -873,10 +982,6 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                       size="large"
                     />
                   </Form.Item>
-                </div>
-
-                <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
-
 
                   <Form.Item name="badge" label={PRODUCT_LABELS.badge}>
                     <Select
@@ -900,25 +1005,77 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
               }
             >
               <Form.Item name="images" className="!mb-0">
-                <Upload
-                  listType="picture-card"
-                  fileList={fileList}
-                  customRequest={handleUpload}
-                  onChange={handleFileListChange}
-                  multiple={false}
-                  maxCount={3}
-                >
-                  {fileList.length >= 3 ? null : (
-                    <div className="flex flex-col items-center justify-center">
-                      <PlusOutlined className="text-lg" />
-                      <div className="mt-2">Unggah</div>
-                    </div>
-                  )}
-                </Upload>
+                <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+                  <SortableContext items={fileList.map((i) => i.uid)} strategy={horizontalListSortingStrategy}>
+                    <Upload
+                      listType="picture-card"
+                      fileList={fileList}
+                      customRequest={handleUpload}
+                      onChange={handleFileListChange}
+                      onPreview={handlePreview}
+                      multiple={true}
+                      maxCount={3}
+                      itemRender={(originNode, file) => (
+                        <DraggableUploadListItem 
+                          originNode={originNode} 
+                          file={file} 
+                          isFirst={fileList[0]?.uid === file.uid}
+                        />
+                      )}
+                    >
+                      {fileList.length >= 3 ? null : (
+                        <div className="flex flex-col items-center justify-center">
+                          <PlusOutlined className="text-lg text-gray-400" />
+                          <div className="mt-2 text-sm text-gray-500">Unggah</div>
+                        </div>
+                      )}
+                    </Upload>
+                  </SortableContext>
+                </DndContext>
               </Form.Item>
-              <Typography.Text type="secondary" className="mt-2 block">
-                Unggah hingga 3 foto untuk produk ini.
-              </Typography.Text>
+
+              <div className="mt-4 rounded-xl bg-blue-50/50 p-4 border border-blue-100/50">
+                <Typography.Text strong className="block mb-2 text-xs uppercase tracking-wider text-blue-600">
+                  Persyaratan Foto
+                </Typography.Text>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-400" />
+                    <Typography.Text type="secondary" className="text-xs">
+                      Maksimal <strong>3 foto</strong> (drag untuk atur urutan)
+                    </Typography.Text>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-400" />
+                    <Typography.Text type="secondary" className="text-xs">
+                      Foto pertama akan menjadi <strong>Foto Utama</strong>
+                    </Typography.Text>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-400" />
+                    <Typography.Text type="secondary" className="text-xs">
+                      Format: <strong>JPG, PNG, atau WebP</strong>
+                    </Typography.Text>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-400" />
+                    <Typography.Text type="secondary" className="text-xs">
+                      Rasio <strong>1:1 (Persegi)</strong> disarankan
+                    </Typography.Text>
+                  </div>
+                </div>
+              </div>
+
+              <Modal
+                open={previewOpen}
+                title="Preview Foto"
+                footer={null}
+                onCancel={() => setPreviewOpen(false)}
+                centered
+                styles={{ body: { padding: 0 } }}
+              >
+                <img alt="preview" className="w-full h-auto" src={previewImage} />
+              </Modal>
             </Card>
 
             <Card
@@ -1530,77 +1687,185 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                   </Typography.Text>
                 }
               >
-                <Form.List name="variants">
-                  {(fields) => (
-                    <div className="space-y-3">
-                      {fields.length === 0 && (
-                        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50/20 py-12 text-center">
-                          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-                            <PlusOutlined className="text-xl" />
-                          </div>
-                          <Typography.Text className="block font-medium text-gray-500">
-                            Belum Ada Varian
-                          </Typography.Text>
-                          <Typography.Text type="secondary" className="max-w-[240px] text-xs">
-                            Tambahkan opsi di atas untuk menghasilkan kombinasi varian secara otomatis.
-                          </Typography.Text>
-                        </div>
-                      )}
+                <div className="p-1">
+                  {selectedRowKeys.length > 0 && (
+                    <div className="mb-4 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+                      <Space size="middle">
+                        <Typography.Text strong className="text-blue-600">
+                          {selectedRowKeys.length} varian terpilih
+                        </Typography.Text>
+                        <div className="h-4 w-[1px] bg-blue-200" />
+                        
+                        <Space size="small">
+                          <Button 
+                            size="small" 
+                            type="text" 
+                            className="text-blue-600 hover:text-blue-700"
+                            onClick={() => {
+                              const basePrice = form.getFieldValue("sellingPrice") || 0;
+                              modal.confirm({
+                                title: "Terapkan Harga ke Semua yang Terpilih",
+                                content: (
+                                  <div className="pt-2">
+                                    <Typography.Text type="secondary" className="block mb-3">
+                                      Masukkan harga yang akan diterapkan ke {selectedRowKeys.length} varian terpilih.
+                                    </Typography.Text>
+                                    <InputNumber
+                                      autoFocus
+                                      style={{ width: "100%" }}
+                                      size="large"
+                                      prefix="Rp"
+                                      {...RUPIAH_FORMATTER}
+                                      defaultValue={basePrice}
+                                      id="bulk-price-input"
+                                      onKeyDown={(e) => {
+                                        if (!/[0-9]/.test(e.key) && !["Backspace", "Tab", "Enter", "Escape", "ArrowLeft", "ArrowRight", "Delete"].includes(e.key)) {
+                                          e.preventDefault();
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                ),
+                                onOk: () => {
+                                  const input = document.getElementById("bulk-price-input") as HTMLInputElement;
+                                  const newPrice = Number(input.value.replace(/\./g, ""));
+                                  const variants = form.getFieldValue("variants");
+                                  const updatedVariants = variants.map((v: any, index: number) => {
+                                    if (selectedRowKeys.includes(index)) {
+                                      return { ...v, price: newPrice };
+                                    }
+                                    return v;
+                                  });
+                                  form.setFieldValue("variants", updatedVariants);
+                                  message.success("Harga berhasil diterapkan");
+                                }
+                              });
+                            }}
+                          >
+                            Terapkan Harga
+                          </Button>
 
-                      {fields.map(({ key, name, ...restField }) => (
-                        <div
-                          key={key}
-                          className="group rounded-xl border border-gray-200 bg-gray-50/30 p-5 transition-all hover:border-gray-300 hover:bg-gray-50/80"
-                        >
-                          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(180px,1.5fr)_160px_280px_180px] lg:items-end">
-                            <div className="flex items-center gap-4 min-w-0">
-                              {form.getFieldValue(["variants", name, "imageUrl"]) && (
-                                <img 
-                                  src={form.getFieldValue(["variants", name, "imageUrl"])} 
-                                  alt="" 
-                                  className="w-12 h-12 rounded-lg object-cover border border-gray-200 flex-shrink-0" 
-                                />
-                              )}
-                              <div className="min-w-0">
-                                <div className="mb-1.5 flex items-center gap-2">
-                                  <div className="h-1.5 w-1.5 rounded-full bg-gray-400" />
-                                  <Typography.Text
-                                    type="secondary"
-                                    className="text-[10px] uppercase tracking-wider font-bold"
-                                  >
-                                    Varian Produk
-                                  </Typography.Text>
-                                </div>
-  
-                                <Typography.Text
-                                  strong
-                                  className="block text-base text-gray-800 truncate"
-                                >
-                                  {form.getFieldValue(["variants", name, "name"])}
-                                </Typography.Text>
-                              </div>
+                          <Button 
+                            size="small" 
+                            type="text" 
+                            className="text-blue-600 hover:text-blue-700"
+                            onClick={() => {
+                              const variants = form.getFieldValue("variants");
+                              const updatedVariants = variants.map((v: any, index: number) => {
+                                if (selectedRowKeys.includes(index)) {
+                                  return { ...v, isActive: true };
+                                }
+                                return v;
+                              });
+                              form.setFieldValue("variants", updatedVariants);
+                              message.success("Varian berhasil diaktifkan");
+                            }}
+                          >
+                            Aktifkan
+                          </Button>
+
+                          <Button 
+                            size="small" 
+                            type="text" 
+                            className="text-blue-600 hover:text-blue-700"
+                            onClick={() => {
+                              const variants = form.getFieldValue("variants");
+                              const updatedVariants = variants.map((v: any, index: number) => {
+                                if (selectedRowKeys.includes(index)) {
+                                  return { ...v, isActive: false };
+                                }
+                                return v;
+                              });
+                              form.setFieldValue("variants", updatedVariants);
+                              message.success("Varian berhasil dinonaktifkan");
+                            }}
+                          >
+                            Non-aktifkan
+                          </Button>
+
+                        </Space>
+                      </Space>
+                      
+                      <Button 
+                        size="small" 
+                        type="text" 
+                        onClick={() => setSelectedRowKeys([])}
+                      >
+                        Batal
+                      </Button>
+                    </div>
+                  )}
+
+                  <Form.List name="variants">
+                    {(fields) => {
+                      const dataSource = fields.map((field, index) => ({
+                        ...form.getFieldValue(["variants", index]),
+                        key: index,
+                        field,
+                      }));
+
+                      const columns = [
+                        {
+                          title: "Foto",
+                          dataIndex: "imageUrl",
+                          key: "imageUrl",
+                          width: 70,
+                          render: (url: string) => url ? (
+                            <img src={url} alt="" className="h-10 w-10 rounded-lg object-cover border border-gray-200" />
+                          ) : (
+                            <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
+                              -
                             </div>
-
+                          )
+                        },
+                        {
+                          title: "Varian",
+                          dataIndex: "name",
+                          key: "name",
+                          render: (name: string, record: any) => (
+                            <div className="flex flex-col">
+                              <Form.Item name={[record.field.name, "name"]} noStyle>
+                                <Input type="hidden" />
+                              </Form.Item>
+                              <Form.Item name={[record.field.name, "imageUrl"]} noStyle>
+                                <Input type="hidden" />
+                              </Form.Item>
+                              <Typography.Text strong className="text-gray-800">
+                                {name}
+                              </Typography.Text>
+                            </div>
+                          )
+                        },
+                        {
+                          title: "SKU",
+                          dataIndex: "sku",
+                          key: "sku",
+                          width: 180,
+                          render: (_: any, record: any) => (
                             <Form.Item
-                              {...restField}
-                              name={[name, "sku"]}
-                              label="SKU"
+                              name={[record.field.name, "sku"]}
+                              noStyle
                               rules={[{ required: true }]}
-                              className="!mb-0"
                             >
-                              <Input />
+                              <Input size="middle" disabled />
                             </Form.Item>
-
+                          )
+                        },
+                        {
+                          title: "Harga",
+                          dataIndex: "price",
+                          key: "price",
+                          width: 200,
+                          render: (_: any, record: any) => (
                             <Form.Item
-                              {...restField}
-                              name={[name, "price"]}
-                              label="Harga"
+                              name={[record.field.name, "price"]}
+                              noStyle
                               rules={[{ required: true }]}
-                              className="!mb-0"
                             >
                               <InputNumber
                                 style={{ width: "100%" }}
                                 prefix="Rp"
+                                size="middle"
                                 {...RUPIAH_FORMATTER}
                                 min={0}
                                 precision={0}
@@ -1610,87 +1875,83 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                                   priceScheme === "by_size" ||
                                   priceScheme === "by_color"
                                 }
-
                                 onKeyDown={(e) => {
-                                  if (
-                                    !/[0-9]/.test(e.key) &&
-                                    ![
-                                      "Backspace",
-                                      "Tab",
-                                      "Enter",
-                                      "Escape",
-                                      "ArrowLeft",
-                                      "ArrowRight",
-                                      "Delete",
-                                    ].includes(e.key)
-                                  ) {
+                                  if (!/[0-9]/.test(e.key) && !["Backspace", "Tab", "Enter", "Escape", "ArrowLeft", "ArrowRight", "Delete"].includes(e.key)) {
                                     e.preventDefault();
                                   }
                                 }}
                               />
                             </Form.Item>
+                          )
+                        },
+                        {
+                          title: "Default",
+                          dataIndex: "isDefault",
+                          key: "isDefault",
+                          width: 90,
+                          align: "center" as const,
+                          render: (_: any, record: any) => (
+                            <Radio
+                              checked={form.getFieldValue(["variants", record.field.name, "isDefault"])}
+                              onChange={() => {
+                                const variants = form.getFieldValue("variants");
+                                variants.forEach((v: any, i: number) => {
+                                  v.isDefault = i === record.field.name;
+                                });
+                                form.setFieldValue("variants", [...variants]);
+                              }}
+                            />
+                          )
+                        },
+                        {
+                          title: "Status",
+                          dataIndex: "isActive",
+                          key: "isActive",
+                          width: 100,
+                          align: "center" as const,
+                          render: (_: any, record: any) => (
+                            <Form.Item
+                              name={[record.field.name, "isActive"]}
+                              valuePropName="checked"
+                              noStyle
+                            >
+                              <Switch size="small" />
+                            </Form.Item>
+                          )
+                        }
+                      ];
 
-                            <div className="flex items-center justify-between gap-3 lg:justify-end lg:pb-1">
-                              <Form.Item
-                                {...restField}
-                                name={[name, "isDefault"]}
-                                valuePropName="checked"
-                                className="!mb-0"
-                              >
-                                <Tag
-                                  color={
-                                    form.getFieldValue([
-                                      "variants",
-                                      name,
-                                      "isDefault",
-                                    ])
-                                      ? "blue"
-                                      : "default"
-                                  }
-                                  className="cursor-pointer"
-                                  onClick={() => {
-                                    const variants =
-                                      form.getFieldValue("variants");
-
-                                    variants.forEach(
-                                      (v: any, i: number) =>
-                                        (v.isDefault = i === name),
-                                    );
-
-                                    form.setFieldValue("variants", [
-                                      ...variants,
-                                    ]);
-                                  }}
-                                >
-                                  {form.getFieldValue([
-                                    "variants",
-                                    name,
-                                    "isDefault",
-                                  ])
-                                    ? "Default"
-                                    : "Set Default"}
-                                </Tag>
-                              </Form.Item>
-
-                              <Form.Item
-                                {...restField}
-                                name={[name, "isActive"]}
-                                valuePropName="checked"
-                                className="!mb-0"
-                              >
-                                <Switch
-                                  size="small"
-                                  checkedChildren="Aktif"
-                                  unCheckedChildren="Non-aktif"
-                                />
-                              </Form.Item>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Form.List>
+                      return (
+                        <Table
+                          dataSource={dataSource}
+                          columns={columns}
+                          pagination={false}
+                          rowSelection={{
+                            selectedRowKeys,
+                            onChange: (keys) => setSelectedRowKeys(keys),
+                          }}
+                          locale={{
+                            emptyText: (
+                              <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                                  <PlusOutlined className="text-xl" />
+                                </div>
+                                <Typography.Text className="block font-medium text-gray-500">
+                                  Belum Ada Varian
+                                </Typography.Text>
+                                <Typography.Text type="secondary" className="max-w-[240px] text-xs">
+                                  Tambahkan opsi di atas untuk menghasilkan kombinasi varian secara otomatis.
+                                </Typography.Text>
+                              </div>
+                            )
+                          }}
+                          className="variant-table"
+                          rowClassName="group"
+                        />
+                      );
+                    }}
+                  </Form.List>
+                </div>
               </Card>
             )}
           </main>
