@@ -73,7 +73,6 @@ model Color {
   hexCode   String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  products  Product[]
 }
 
 model ProductCounter {
@@ -94,8 +93,6 @@ model Product {
   name              String
   slug              String           @unique
   description       String?
-  colorId           String?
-  color             Color?           @relation(fields: [colorId], references: [id], onDelete: SetNull)
   badge             String?
   productCategoryId String
   productCategory   ProductCategory  @relation(fields: [productCategoryId], references: [id])

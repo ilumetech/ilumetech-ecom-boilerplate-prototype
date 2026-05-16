@@ -8,10 +8,6 @@ export class QueryProductDto extends QueryDto {
   productCategoryId?: string;
 
   @IsOptional()
-  @IsString()
-  colorId?: string;
-
-  @IsOptional()
   @IsBoolean()
   @Transform(({ value }: { value: unknown }) => {
     if (value === 'true') return true;

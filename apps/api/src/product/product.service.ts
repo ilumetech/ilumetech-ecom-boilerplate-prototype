@@ -17,7 +17,6 @@ import type {
 type ProductWithRelations = Prisma.ProductGetPayload<{
   include: {
     productCategory: true;
-    color: true;
     unit: true;
     images: true;
     options: {
@@ -43,7 +42,6 @@ type ProductWithRelations = Prisma.ProductGetPayload<{
 
 const PRODUCT_INCLUDE = {
   productCategory: true,
-  color: true,
   unit: true,
   images: true,
   options: {
@@ -81,7 +79,6 @@ export class ProductService {
     const filters: Record<string, unknown> = {};
     if (query.productCategoryId)
       filters.productCategoryId = query.productCategoryId;
-    if (query.colorId) filters.colorId = query.colorId;
     if (query.isActive !== undefined) filters.isActive = query.isActive;
 
     const { skip, take, where, orderBy } = buildPrismaQuery({
@@ -139,7 +136,6 @@ export class ProductService {
           name: dto.name,
           slug,
           description: dto.description,
-          colorId: dto.colorId,
           badge: dto.badge,
           productCategoryId: dto.productCategoryId,
           unitId: dto.unitId,
@@ -147,6 +143,13 @@ export class ProductService {
           purchasePrice: dto.purchasePrice,
           weightGram: dto.weightGram,
           isActive: dto.isActive ?? true,
+          images: {
+            create: dto.images?.map((img) => ({
+              url: img.url,
+              alt: img.alt,
+              sortOrder: img.sortOrder ?? 0,
+            })),
+          },
         },
       });
 
@@ -220,7 +223,7 @@ export class ProductService {
 
   async update(id: string, dto: UpdateProductDto): Promise<Product> {
     const existing = await this.findOne(id);
-    const { options, variants, ...productData } = dto;
+    const { options, variants, images, ...productData } = dto;
     const data: Prisma.ProductUncheckedUpdateInput = { ...productData };
 
     if (dto.name && dto.name !== existing.name && !dto.slug) {
@@ -310,6 +313,20 @@ export class ProductService {
         }
       }
 
+      if (images) {
+        await tx.productImage.deleteMany({ where: { productId: id } });
+        for (const img of images) {
+          await tx.productImage.create({
+            data: {
+              productId: id,
+              url: img.url,
+              alt: img.alt,
+              sortOrder: img.sortOrder ?? 0,
+            },
+          });
+        }
+      }
+
       const result = await tx.product.findUnique({
         where: { id },
         include: PRODUCT_INCLUDE,
@@ -359,10 +376,6 @@ export class ProductService {
       name: product.name,
       slug: product.slug,
       description: product.description,
-      colorId: product.colorId,
-      color: product.color
-        ? { id: product.color.id, name: product.color.name, hexCode: product.color.hexCode }
-        : null,
       badge: product.badge,
       productCategoryId: product.productCategoryId,
       productCategory: {

@@ -2,6 +2,7 @@ import { IsArray, IsBoolean, IsNumber, IsOptional, IsString, ValidateNested } fr
 import { Type } from 'class-transformer';
 import { CreateProductOptionDto } from './product-option.dto';
 import { CreateProductVariantDto } from './product-variant.dto';
+import { CreateProductImageDto } from './product-image.dto';
 
 export class CreateProductDto {
   @IsString()
@@ -14,10 +15,6 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @IsOptional()
-  @IsString()
-  colorId?: string;
 
   @IsOptional()
   @IsString()
@@ -58,4 +55,10 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantDto)
   variants?: CreateProductVariantDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductImageDto)
+  images?: CreateProductImageDto[];
 }

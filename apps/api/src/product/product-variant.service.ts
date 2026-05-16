@@ -47,15 +47,16 @@ export class ProductVariantService {
     if (existingSku) throw new BadRequestException(`SKU ${dto.sku} is already in use`);
 
     // 2. Validate option values belong to the same product
+    const optionValueIds = dto.optionValueIds ?? [];
     const optionValues = await this.prisma.productOptionValue.findMany({
       where: {
-        id: { in: dto.optionValueIds },
+        id: { in: optionValueIds },
         option: { productId },
       },
       include: { option: true },
     });
 
-    if (optionValues.length !== dto.optionValueIds.length) {
+    if (optionValues.length !== optionValueIds.length) {
       throw new BadRequestException('One or more option values do not belong to this product');
     }
 
@@ -71,7 +72,7 @@ export class ProductVariantService {
       include: { optionValues: true },
     });
 
-    const newCombo = new Set(dto.optionValueIds);
+    const newCombo = new Set(optionValueIds);
     for (const v of allVariants) {
       const vCombo = new Set(v.optionValues.map((ov) => ov.optionValueId));
       if (vCombo.size === newCombo.size && [...vCombo].every((id) => newCombo.has(id))) {
@@ -105,7 +106,7 @@ export class ProductVariantService {
         isDefault: dto.isDefault ?? false,
         isActive: dto.isActive ?? true,
         optionValues: {
-          create: dto.optionValueIds.map((id) => ({
+          create: optionValueIds.map((id) => ({
             optionValueId: id,
           })),
         },

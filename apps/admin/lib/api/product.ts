@@ -8,7 +8,6 @@ export interface ProductQueryParams {
   sortField?: string;
   sortOrder?: 'asc' | 'desc';
   productCategoryId?: string;
-  colorId?: string;
   isActive?: boolean;
 }
 
@@ -16,7 +15,6 @@ interface CreateProductPayload {
   name: string;
   slug?: string;
   description?: string;
-  colorId?: string;
   badge?: string;
   productCategoryId: string;
   unitId: string;
@@ -32,7 +30,6 @@ interface UpdateProductPayload {
   name?: string;
   slug?: string;
   description?: string;
-  colorId?: string;
   badge?: string;
   productCategoryId?: string;
   unitId?: string;

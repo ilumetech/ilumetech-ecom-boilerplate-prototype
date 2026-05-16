@@ -13,6 +13,7 @@ import { UnitModule } from './unit/unit.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ColorModule } from './color/color.module';
+import { UploadModule } from './upload/upload.module';
 
 
 @Module({
@@ -28,6 +29,7 @@ import { ColorModule } from './color/color.module';
     AuditLogModule,
     DashboardModule,
     ColorModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [

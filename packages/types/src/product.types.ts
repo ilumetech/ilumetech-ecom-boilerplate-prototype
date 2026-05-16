@@ -60,8 +60,6 @@ export interface Product {
   name: string;
   slug: string;
   description: string | null;
-  colorId: string | null;
-  color: ColorRef | null;
   badge: string | null;
   productCategoryId: string;
   productCategory: ProductCategoryRef;

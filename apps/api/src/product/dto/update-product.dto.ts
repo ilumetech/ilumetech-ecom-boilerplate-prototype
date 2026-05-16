@@ -18,10 +18,6 @@ export class UpdateProductDto {
 
   @IsOptional()
   @IsString()
-  colorId?: string;
-
-  @IsOptional()
-  @IsString()
   badge?: string;
 
   @IsOptional()

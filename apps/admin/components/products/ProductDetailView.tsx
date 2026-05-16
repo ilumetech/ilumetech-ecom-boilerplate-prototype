@@ -86,22 +86,7 @@ export function ProductDetailView({ productId }: ProductDetailViewProps) {
         <Descriptions.Item label={PRODUCT_LABELS.productCategory}>
           {product.productCategory.name}
         </Descriptions.Item>
-        <Descriptions.Item label={PRODUCT_LABELS.color}>
-          <Space>
-            {product.color?.hexCode && (
-              <div 
-                style={{ 
-                  width: 14, 
-                  height: 14, 
-                  borderRadius: '50%', 
-                  backgroundColor: product.color.hexCode,
-                  border: '1px solid #d9d9d9'
-                }} 
-              />
-            )}
-            {product.color?.name ?? "—"}
-          </Space>
-        </Descriptions.Item>
+
         <Descriptions.Item label={PRODUCT_LABELS.badge}>
           {product.badge ? (
             <Tag color={

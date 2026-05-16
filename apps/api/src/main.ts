@@ -14,6 +14,8 @@ async function bootstrap(): Promise<void> {
     new FastifyAdapter(),
   );
 
+  await app.register(import('@fastify/multipart'));
+
   app.enableCors({
     origin: (
       process.env.CORS_ORIGINS ||
