@@ -70,6 +70,7 @@ interface FormVariant {
   price: number;
   compareAtPrice?: number;
   optionValues: { optionName: string; value: string }[];
+  optionValueIds?: string[];
   tempOptionValueIds?: string[];
   isActive: boolean;
   isDefault: boolean;
@@ -110,11 +111,17 @@ const VALUE_PRESETS: Record<string, string[]> = {
   "Size (Run)": ["41", "42", "43", "41-43"],
 };
 
+const DEFAULT_VARIANT_NAME = "Default";
+
 function cartesianProduct<T>(arrays: T[][]): T[][] {
   return arrays.reduce<T[][]>(
     (acc, curr) => acc.flatMap((a) => curr.map((c) => [...a, c])),
     [[]],
   );
+}
+
+function buildDefaultVariantSku(productPart: string): string {
+  return `ILU-${productPart}-0001`;
 }
 
 const getBase64 = (file: File): Promise<string> =>
@@ -176,10 +183,12 @@ function parseSizeRun(input: string): FormOptionValue[] {
   parts.forEach((part) => {
     if (part.includes("-")) {
       const rangeParts = part.split("-").map((s) => s.trim());
+      const startStr = rangeParts[0];
+      const endStr = rangeParts[1];
 
-      if (rangeParts.length === 2) {
-        const start = parseInt(rangeParts[0]);
-        const end = parseInt(rangeParts[1]);
+      if (rangeParts.length === 2 && startStr !== undefined && endStr !== undefined) {
+        const start = parseInt(startStr);
+        const end = parseInt(endStr);
 
         if (!isNaN(start) && !isNaN(end) && start <= end) {
           for (let i = start; i <= end; i++) {
@@ -327,11 +336,13 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     queryFn: () => colorApi.getAll({ limit: 100 }),
   });
 
-  const { data: product } = useQuery({
+  const { data: product, isLoading: isProductLoading } = useQuery({
     queryKey: ["products", "detail", productId],
     queryFn: () => productApi.getById(productId!),
     enabled: isEditMode,
   });
+
+  const hasSavedOptions = isEditMode && product?.options && product.options.length > 0;
 
   const { data: productsData } = useQuery({
     queryKey: ["products", "count"],
@@ -387,6 +398,14 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         isActive: v.isActive,
         isDefault: v.isDefault,
         optionValues: v.optionValues,
+        optionValueIds: v.optionValues
+          .map((ov) => {
+            const opt = product.options?.find((o) => o.name === ov.optionName);
+            const val = opt?.values?.find((val) => val.value === ov.value);
+            return val?.id;
+          })
+          .filter((id): id is string => !!id),
+        tempOptionValueIds: [],
       })),
       images: product.images?.map((img) => ({
         url: img.url,
@@ -405,6 +424,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   useEffect(() => {
     if (isEditMode && product?.variants) {
       const images: Record<string, string> = {};
+      const sizePricesMap: Record<string, number> = {};
+      const colorPricesMap: Record<string, number> = {};
+
       product.variants.forEach((v) => {
         const colorVal = v.optionValues.find(
           (ov) => ov.optionName === "Warna",
@@ -412,8 +434,65 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         if (colorVal && v.imageUrl) {
           images[colorVal] = v.imageUrl;
         }
+
+        const sizeVal = v.optionValues.find(
+          (ov) => ov.optionName === "Size" || ov.optionName === "Size (Run)",
+        )?.value;
+
+        if (sizeVal) {
+          sizePricesMap[sizeVal] = v.price;
+        }
+        if (colorVal) {
+          colorPricesMap[colorVal] = v.price;
+        }
       });
+
       setVariantImages(images);
+      setSizePrices(sizePricesMap);
+      setColorPrices(colorPricesMap);
+
+      // Deduce price scheme
+      const dbVariants = product?.variants;
+      if (dbVariants && dbVariants.length > 0 && dbVariants[0]) {
+        const firstPrice = dbVariants[0].price;
+        const allPricesSame = dbVariants.every((v) => v.price === firstPrice);
+
+        if (allPricesSame) {
+          setPriceScheme("all_same");
+        } else {
+          const sizeGroups: Record<string, Set<number>> = {};
+          const colorGroups: Record<string, Set<number>> = {};
+
+          dbVariants.forEach((v) => {
+            const sizeVal = v.optionValues.find(
+              (ov) => ov.optionName === "Size" || ov.optionName === "Size (Run)",
+            )?.value;
+            const colorVal = v.optionValues.find(
+              (ov) => ov.optionName === "Warna",
+            )?.value;
+
+            if (sizeVal) {
+              if (!sizeGroups[sizeVal]) sizeGroups[sizeVal] = new Set();
+              sizeGroups[sizeVal].add(v.price);
+            }
+            if (colorVal) {
+              if (!colorGroups[colorVal]) colorGroups[colorVal] = new Set();
+              colorGroups[colorVal].add(v.price);
+            }
+          });
+
+          const sizePricesUnique = Object.values(sizeGroups).every((s) => s.size === 1);
+          const colorPricesUnique = Object.values(colorGroups).every((s) => s.size === 1);
+
+          if (sizePricesUnique && !colorPricesUnique) {
+            setPriceScheme("by_size");
+          } else if (colorPricesUnique && !sizePricesUnique) {
+            setPriceScheme("by_color");
+          } else {
+            setPriceScheme("by_both");
+          }
+        }
+      }
     }
   }, [isEditMode, product]);
 
@@ -514,7 +593,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
     const productIndex =
       isEditMode && product?.code
-        ? parseInt(product.code.split("-")[1])
+        ? parseInt(product.code.split("-")[1] ?? "0")
         : (productsData?.meta?.total ?? 0) + 1;
 
     const productPart = String(productIndex).padStart(4, "0");
@@ -526,12 +605,14 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         .map((c) => `${c.optionName}:${c.value || ""}`)
         .join("|");
 
-      const existing = currentVariants.find(
-        (v: FormVariant) =>
-          v.optionValues
-            .map((ov) => `${ov.optionName}:${ov.value}`)
-            .join("|") === comboKey,
-      );
+      const existing = currentVariants.find((v: FormVariant) => {
+        if (!v.optionValues || v.optionValues.length !== combo.length) return false;
+        return combo.every((c) =>
+          v.optionValues.some(
+            (ov) => ov.optionName === c.optionName && ov.value === c.value
+          )
+        );
+      });
 
       // Determine price based on scheme
       let variantPrice = basePrice;
@@ -566,6 +647,22 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
       const variantPart = String(index + 1).padStart(4, "0");
 
+      const optionValueIds: string[] = [];
+      const tempOptionValueIds: string[] = [];
+
+      combo.forEach((c) => {
+        const isDbId =
+          c.id &&
+          !c.id.startsWith("temp_") &&
+          (c.id.includes("-") || c.id.length === 24 || c.id.length === 36);
+
+        if (isDbId) {
+          optionValueIds.push(c.id);
+        } else if (c.id) {
+          tempOptionValueIds.push(c.id);
+        }
+      });
+
       return {
         name: variantName,
         sku: `ILU-${productPart}-${variantPart}`,
@@ -574,13 +671,8 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           optionName: c.optionName,
           value: c.value,
         })),
-        tempOptionValueIds: combo
-          .map((c) => c.id)
-          .filter(
-            (id) =>
-              id?.startsWith("temp_") ||
-              (!id?.includes("-") && id?.length !== 24 && id?.length !== 36),
-          ),
+        optionValueIds,
+        tempOptionValueIds,
         isActive: true,
         isDefault: index === 0 && currentVariants.length === 0,
         imageUrl:
@@ -695,48 +787,79 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
   function handleFinish(values: FormValues) {
     const { hasVariants, ...rest } = values;
+    const hasVariantOptions = Boolean(hasVariants && values.options?.length);
+    const productIndex =
+      isEditMode && product?.code
+        ? parseInt(product.code.split("-")[1] ?? "0")
+        : (productsData?.meta?.total ?? 0) + 1;
+    const productPart = String(productIndex).padStart(4, "0");
+    const currentDefaultVariant =
+      values.variants?.find((variant) => variant.isDefault) ??
+      values.variants?.[0];
+
+    const defaultVariant = {
+      sku:
+        currentDefaultVariant?.sku && !currentDefaultVariant.optionValues?.length
+          ? currentDefaultVariant.sku
+          : buildDefaultVariantSku(productPart),
+      name: DEFAULT_VARIANT_NAME,
+      price: values.sellingPrice,
+      compareAtPrice: currentDefaultVariant?.compareAtPrice,
+      isDefault: true,
+      isActive: currentDefaultVariant?.isActive ?? true,
+      imageUrl: currentDefaultVariant?.imageUrl,
+      tempOptionValueIds: [],
+    };
 
     const payload = {
       ...rest,
-      options: values.options?.map((opt, optIdx) => {
-        const isSizeRun = opt.name === "Size (Run)";
+      options: hasVariantOptions
+        ? values.options?.map((opt, optIdx) => {
+            const isSizeRun = opt.name === "Size (Run)";
 
-        const rawValues = isSizeRun
-          ? typeof opt.values === "string"
-            ? parseSizeRun(opt.values)
-            : opt.values
-          : opt.values;
-
-        return {
-          name: opt.name,
-          position: optIdx,
-          values: rawValues.map((v, valIdx) => {
-            const isExisting =
-              v.value.includes("-") ||
-              v.value.length === 24 ||
-              v.value.length === 36;
+            const rawValues = isSizeRun
+              ? typeof opt.values === "string"
+                ? parseSizeRun(opt.values)
+                : opt.values
+              : opt.values;
 
             return {
-              id: isExisting ? v.value : undefined,
-              value: v.label,
-              position: valIdx,
+              name: opt.name,
+              position: optIdx,
+              values: rawValues.map((v, valIdx) => {
+                const isExisting =
+                  v.value.includes("-") ||
+                  v.value.length === 24 ||
+                  v.value.length === 36;
+
+                return {
+                  id: isExisting ? v.value : undefined,
+                  value: v.label,
+                  position: valIdx,
+                };
+              }),
             };
-          }),
-        };
-      }),
-      variants: values.variants?.map((v, index) => {
-        const currentVariant = form.getFieldValue(["variants", index]);
-        return {
-          sku: v.sku,
-          name: v.name || currentVariant?.name || "",
-          price: v.price,
-          compareAtPrice: v.compareAtPrice,
-          isDefault: v.isDefault,
-          isActive: v.isActive,
-          imageUrl: v.imageUrl || currentVariant?.imageUrl,
-          tempOptionValueIds: v.tempOptionValueIds || currentVariant?.tempOptionValueIds,
-        };
-      }),
+          })
+        : [],
+      variants:
+        hasVariantOptions && values.variants?.length
+          ? values.variants.map((v, index) => {
+              const currentVariant = form.getFieldValue(["variants", index]);
+              return {
+                sku: v.sku,
+                name: v.name || currentVariant?.name || "",
+                price: v.price,
+                compareAtPrice: v.compareAtPrice,
+                isDefault: v.isDefault,
+                isActive: v.isActive,
+                imageUrl: v.imageUrl || currentVariant?.imageUrl,
+                optionValueIds:
+                  v.optionValueIds || currentVariant?.optionValueIds || [],
+                tempOptionValueIds:
+                  v.tempOptionValueIds || currentVariant?.tempOptionValueIds || [],
+              };
+            })
+          : [defaultVariant],
     };
 
     if (!isEditMode) {
@@ -845,28 +968,75 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     return options;
   };
 
+  const getSavedValueIds = useCallback(
+    (index: number) => {
+      if (!isEditMode || !product?.options) return new Set<string>();
+      const optionName = form.getFieldValue(["options", index, "name"]);
+      const dbOption = product.options.find((opt) => opt.name === optionName);
+      if (!dbOption) return new Set<string>();
+      return new Set(dbOption.values.map((v) => v.id));
+    },
+    [isEditMode, product, form],
+  );
+
+  const getSavedValueNames = useCallback(
+    (index: number) => {
+      if (!isEditMode || !product?.options) return new Set<string>();
+      const optionName = form.getFieldValue(["options", index, "name"]);
+      const dbOption = product.options.find((opt) => opt.name === optionName);
+      if (!dbOption) return new Set<string>();
+      return new Set(dbOption.values.map((v) => v.value.toLowerCase()));
+    },
+    [isEditMode, product, form],
+  );
+
   const getValueOptions = (index: number) => {
     const optionName = form.getFieldValue(["options", index, "name"]);
     const search = optionValueSearches[index] || "";
+    const savedIds = getSavedValueIds(index);
+    const savedNames = getSavedValueNames(index);
+
+    let list: { label: string; value: string; color?: string | null; disabled?: boolean }[] = [];
 
     if (optionName === "Warna") {
-      return colorOptions;
-    }
+      list = colorOptions.map((opt) => ({
+        ...opt,
+        disabled: savedIds.has(opt.value) || savedNames.has(opt.label.toLowerCase()),
+      }));
+    } else {
+      const presets = VALUE_PRESETS[optionName] || [];
+      list = presets.map((p) => ({ label: p, value: p }));
 
-    const presets = VALUE_PRESETS[optionName] || [];
-    const options = presets.map((p) => ({ label: p, value: p }));
+      // Ensure currently selected values are included so they can be marked disabled if saved
+      const currentValues = form.getFieldValue(["options", index, "values"]) || [];
+      if (Array.isArray(currentValues)) {
+        currentValues.forEach((cv: any) => {
+          if (cv && cv.value && !list.some((item) => item.value === cv.value)) {
+            list.push({
+              label: cv.label,
+              value: cv.value,
+            });
+          }
+        });
+      }
+
+      list = list.map((item) => ({
+        ...item,
+        disabled: savedIds.has(item.value) || savedNames.has(item.label.toLowerCase()),
+      }));
+    }
 
     if (
       search &&
-      !options.some((opt) => opt.label.toLowerCase() === search.toLowerCase())
+      !list.some((opt) => opt.label.toLowerCase() === search.toLowerCase())
     ) {
-      options.push({
+      list.push({
         label: `+ Tambah "${search}"`,
         value: search,
       });
     }
 
-    return options;
+    return list;
   };
 
   const sizes = useMemo(() => {
@@ -887,38 +1057,51 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     return colorOpt.values || [];
   }, [watchOptions]);
 
-  return (
-    <div className="mx-auto w-full max-w-7xl px-4 pb-28 sm:px-6 lg:px-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Space size="middle" align="center">
-          <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
-            Kembali
-          </Button>
-
-          <div>
-            <Typography.Title level={3} className="!mb-1">
-              {isEditMode ? "Edit Produk" : "Tambah Produk"}
-            </Typography.Title>
-
-            <Typography.Text type="secondary">
-              Lengkapi detail produk, harga, opsi, dan varian dalam satu
-              halaman.
-            </Typography.Text>
-          </div>
-        </Space>
-
-        <Form.Item name="isActive" valuePropName="checked" className="!mb-0">
-          <Switch checkedChildren="Aktif" unCheckedChildren="Non-aktif" />
-        </Form.Item>
+  if (isEditMode && isProductLoading) {
+    return (
+      <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-4">
+        <div className="relative flex items-center justify-center">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+        </div>
+        <Typography.Text type="secondary" className="animate-pulse">
+          Memuat data produk...
+        </Typography.Text>
       </div>
+    );
+  }
 
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleFinish}
-        initialValues={{ isActive: true }}
-        requiredMark="optional"
-      >
+  return (
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={handleFinish}
+      initialValues={{ isActive: true }}
+      requiredMark="optional"
+    >
+      <div className="mx-auto w-full max-w-7xl px-4 pb-28 sm:px-6 lg:px-8">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Space size="middle" align="center">
+            <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
+              Kembali
+            </Button>
+
+            <div>
+              <Typography.Title level={3} className="!mb-1">
+                {isEditMode ? "Edit Produk" : "Tambah Produk"}
+              </Typography.Title>
+
+              <Typography.Text type="secondary">
+                Lengkapi detail produk, harga, opsi, dan varian dalam satu
+                halaman.
+              </Typography.Text>
+            </div>
+          </Space>
+
+          <Form.Item name="isActive" valuePropName="checked" className="!mb-0">
+            <Switch checkedChildren="Aktif" unCheckedChildren="Non-aktif" />
+          </Form.Item>
+        </div>
+
         <div className="space-y-6">
           <main className="space-y-6">
             <Card
@@ -1193,6 +1376,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                   <Switch
                     checkedChildren="Ya"
                     unCheckedChildren="Tidak"
+                    disabled={hasSavedOptions}
                     onChange={(checked) => {
                       if (!checked) {
                         form.setFieldsValue({
@@ -1262,6 +1446,15 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                   <Typography.Text type="secondary">Opsional</Typography.Text>
                 }
               >
+                {hasSavedOptions && (
+                  <div className="mb-6 rounded-xl bg-blue-50/50 p-4 border border-blue-100/50 flex items-start gap-3">
+                    <Typography.Text className="text-blue-600 text-base">ℹ️</Typography.Text>
+                    <Typography.Text type="secondary" className="text-xs leading-relaxed">
+                      Struktur varian (nama opsi dan nilai opsi yang sudah disimpan) telah dikunci untuk menjaga integritas pesanan dan inventaris. Anda tetap dapat menambahkan nilai baru (seperti ukuran atau warna baru), mengubah harga, SKU, foto, dan status aktif untuk setiap varian.
+                    </Typography.Text>
+                  </div>
+                )}
+
                 <Typography.Paragraph type="secondary" className="!mb-4">
                   Buat opsi seperti warna atau ukuran. Kombinasi opsi akan
                   otomatis menjadi varian.
@@ -1270,146 +1463,155 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                 <Form.List name="options">
                   {(fields, { add, remove }) => (
                     <div className="space-y-4">
-                      {fields.map(({ key, name, ...restField }) => (
-                        <div
-                          key={key}
-                          className="group relative rounded-xl border border-gray-200 bg-gray-50/30 p-5 transition-all hover:border-gray-300 hover:bg-gray-50/80"
-                        >
-                          <div className="mb-4 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-600">
-                                {name + 1}
+                      {fields.map(({ key, name, ...restField }) => {
+                        const isExistingOption = isEditMode && product?.options && name < product.options.length;
+                        return (
+                          <div
+                            key={key}
+                            className="group relative rounded-xl border border-gray-200 bg-gray-50/30 p-5 transition-all hover:border-gray-300 hover:bg-gray-50/80"
+                          >
+                            <div className="mb-4 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-600">
+                                  {name + 1}
+                                </div>
+                                <Typography.Text className="text-sm font-semibold text-gray-700">
+                                  Konfigurasi Opsi
+                                </Typography.Text>
                               </div>
-                              <Typography.Text className="text-sm font-semibold text-gray-700">
-                                Konfigurasi Opsi
-                              </Typography.Text>
+
+                              {!isExistingOption && (
+                                <Button
+                                  type="text"
+                                  danger
+                                  size="small"
+                                  className="opacity-0 transition-opacity group-hover:opacity-100"
+                                  icon={<DeleteOutlined />}
+                                  onClick={() => remove(name)}
+                                />
+                              )}
                             </div>
 
-                            <Button
-                              type="text"
-                              danger
-                              size="small"
-                              className="opacity-0 transition-opacity group-hover:opacity-100"
-                              icon={<DeleteOutlined />}
-                              onClick={() => remove(name)}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <Form.Item
-                              {...restField}
-                              name={[name, "name"]}
-                              label="Nama Opsi"
-                              rules={[{ required: true }]}
-                              className="!mb-0"
-                            >
-                              <Select
-                                showSearch
-                                placeholder="Contoh: Ukuran, Warna"
-                                options={getOptionNameOptions(name)}
-                                onSearch={(val) =>
-                                  setOptionNameSearches((prev) => ({
-                                    ...prev,
-                                    [name]: val,
-                                  }))
-                                }
-                                onSelect={() =>
-                                  setOptionNameSearches((prev) => ({
-                                    ...prev,
-                                    [name]: "",
-                                  }))
-                                }
-                              />
-                            </Form.Item>
-
-                            <Form.Item
-                              {...restField}
-                              name={[name, "values"]}
-                              label="Nilai Opsi"
-                              rules={[{ required: true }]}
-                              className="!mb-0"
-                              {...(watchOptions?.[name]?.name === "Size (Run)"
-                                ? {
-                                    getValueProps: (val) => ({
-                                      value: Array.isArray(val)
-                                        ? val
-                                            .map((v: any) => v.label)
-                                            .join(", ")
-                                        : val,
-                                    }),
-                                  }
-                                : {})}
-                            >
-                              {watchOptions?.[name]?.name === "Size (Run)" ? (
-                                <Input placeholder="Contoh: 41,42,43 atau 41-43" />
-                              ) : (
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                              <Form.Item
+                                {...restField}
+                                name={[name, "name"]}
+                                label="Nama Opsi"
+                                rules={[{ required: true }]}
+                                className="!mb-0"
+                              >
                                 <Select
-                                  mode={
-                                    watchOptions?.[name]?.name === "Warna"
-                                      ? "multiple"
-                                      : "tags"
-                                  }
-                                  placeholder="Pilih atau ketik nilai baru"
-                                  options={getValueOptions(name)}
-                                  labelInValue
-                                  optionRender={(option) => (
-                                    <Space>
-                                      {option.data.color && (
-                                        <div
-                                          style={{
-                                            width: 14,
-                                            height: 14,
-                                            borderRadius: "50%",
-                                            backgroundColor: option.data.color,
-                                            border: "1px solid #d9d9d9",
-                                          }}
-                                        />
-                                      )}
-
-                                      <span>{option.data.label}</span>
-                                    </Space>
-                                  )}
-                                  onSearch={(val) => {
-                                    setOptionValueSearches((prev) => ({
+                                  showSearch
+                                  disabled={isExistingOption}
+                                  placeholder="Contoh: Ukuran, Warna"
+                                  options={getOptionNameOptions(name)}
+                                  onSearch={(val) =>
+                                    setOptionNameSearches((prev) => ({
                                       ...prev,
                                       [name]: val,
-                                    }));
+                                    }))
+                                  }
+                                  onSelect={() =>
+                                    setOptionNameSearches((prev) => ({
+                                      ...prev,
+                                      [name]: "",
+                                    }))
+                                  }
+                                />
+                              </Form.Item>
 
-                                    if (watchOptions?.[name]?.name === "Warna") {
-                                      setColorwaySearch(val);
+                              <Form.Item
+                                {...restField}
+                                name={[name, "values"]}
+                                label="Nilai Opsi"
+                                rules={[{ required: true }]}
+                                className="!mb-0"
+                                {...(watchOptions?.[name]?.name === "Size (Run)"
+                                  ? {
+                                      getValueProps: (val) => ({
+                                        value: Array.isArray(val)
+                                          ? val
+                                              .map((v: any) => v.label)
+                                              .join(", ")
+                                          : val,
+                                      }),
                                     }
-                                  }}
-                                  onSelect={(v: any) => {
-                                    if (
-                                      v.value
-                                        ?.toString()
-                                        .startsWith("CREATE_") ||
-                                      (watchOptions?.[name]?.name === "Warna" &&
-                                        !colorsData?.data.some(
-                                          (c) => c.id === v.value,
-                                        ))
-                                    ) {
-                                      const newName = v.label
-                                        .toString()
-                                        .replace("+ Tambah ", "")
-                                        .replace(/"/g, "");
+                                  : {})}
+                              >
+                                {watchOptions?.[name]?.name === "Size (Run)" ? (
+                                  <Input placeholder="Contoh: 41,42,43 atau 41-43" />
+                                ) : (
+                                  <Select
+                                    mode={
+                                      watchOptions?.[name]?.name === "Warna"
+                                        ? "multiple"
+                                        : "tags"
+                                    }
+                                    placeholder="Pilih atau ketik nilai baru"
+                                    options={getValueOptions(name)}
+                                    labelInValue
+                                    onDeselect={(deselectedValue: any) => {
+                                      const savedIds = getSavedValueIds(name);
+                                      const valId = deselectedValue?.value;
+                                      if (valId && savedIds.has(valId)) {
+                                        message.warning(
+                                          "Nilai opsi yang sudah disimpan tidak dapat dihapus untuk menjaga integritas data."
+                                        );
+                                        const currentVals = form.getFieldValue(["options", name, "values"]) || [];
+                                        if (!currentVals.some((cv: any) => cv.value === valId)) {
+                                          form.setFieldValue(
+                                            ["options", name, "values"],
+                                            [...currentVals, deselectedValue]
+                                          );
+                                        }
+                                      }
+                                    }}
+                                    optionRender={(option) => {
+                                      const optData = option.data as any;
+                                      return (
+                                        <Space>
+                                          {optData.color && (
+                                            <div
+                                              style={{
+                                                width: 14,
+                                                height: 14,
+                                                borderRadius: "50%",
+                                                backgroundColor: optData.color,
+                                                border: "1px solid #d9d9d9",
+                                              }}
+                                            />
+                                          )}
 
-                                      const currentValues =
-                                        form.getFieldValue([
-                                          "options",
-                                          name,
-                                          "values",
-                                        ]);
-
-                                      form.setFieldValue(
-                                        ["options", name, "values"],
-                                        currentValues.filter(
-                                          (cv: any) => cv.value !== v.value,
-                                        ),
+                                          <span>{optData.label}</span>
+                                        </Space>
                                       );
+                                    }}
+                                    onSearch={(val) => {
+                                      setOptionValueSearches((prev) => ({
+                                        ...prev,
+                                        [name]: val,
+                                      }));
 
-                                      handleCreateColor(newName, (color) => {
-                                        const updatedValues =
+                                      if (watchOptions?.[name]?.name === "Warna") {
+                                        setColorwaySearch(val);
+                                      }
+                                    }}
+                                    onSelect={(v: any) => {
+                                      if (
+                                        v.value
+                                          ?.toString()
+                                          .startsWith("CREATE_") ||
+                                        (watchOptions?.[name]?.name === "Warna" &&
+                                          !colorsData?.data.some(
+                                            (c) => c.id === v.value,
+                                          ))
+                                      ) {
+                                        const newName = v.label
+                                          .toString()
+                                          .replace("+ Tambah ", "")
+                                          .replace(/"/g, "");
+
+                                        const currentValues =
                                           form.getFieldValue([
                                             "options",
                                             name,
@@ -1418,48 +1620,64 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
                                         form.setFieldValue(
                                           ["options", name, "values"],
-                                          [
-                                            ...updatedValues,
-                                            {
-                                              label: color.name,
-                                              value: color.id,
-                                            },
-                                          ],
+                                          currentValues.filter(
+                                            (cv: any) => cv.value !== v.value,
+                                          ),
                                         );
 
+                                        handleCreateColor(newName, (color) => {
+                                          const updatedValues =
+                                            form.getFieldValue([
+                                              "options",
+                                              name,
+                                              "values",
+                                            ]);
+
+                                          form.setFieldValue(
+                                            ["options", name, "values"],
+                                            [
+                                              ...updatedValues,
+                                              {
+                                                label: color.name,
+                                                value: color.id,
+                                              },
+                                            ],
+                                          );
+
+                                          setOptionValueSearches((prev) => ({
+                                            ...prev,
+                                            [name]: "",
+                                          }));
+
+                                          setColorwaySearch("");
+                                        });
+                                      } else {
                                         setOptionValueSearches((prev) => ({
                                           ...prev,
                                           [name]: "",
                                         }));
 
-                                        setColorwaySearch("");
-                                      });
-                                    } else {
-                                      setOptionValueSearches((prev) => ({
-                                        ...prev,
-                                        [name]: "",
-                                      }));
-
-                                      if (
-                                        watchOptions?.[name]?.name === "Warna"
-                                      ) {
-                                        setColorwaySearch("");
+                                        if (
+                                          watchOptions?.[name]?.name === "Warna"
+                                        ) {
+                                          setColorwaySearch("");
+                                        }
                                       }
-                                    }
-                                  }}
-                                />
-                              )}
-                            </Form.Item>
+                                    }}
+                                  />
+                                )}
+                              </Form.Item>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
 
                       <Button
                         type="dashed"
                         block
                         icon={<PlusOutlined />}
                         onClick={() => add()}
-                        disabled={fields.length >= 2}
+                        disabled={fields.length >= 2 || hasSavedOptions}
                         className="h-12 rounded-xl border-gray-300 text-gray-500 transition-all hover:border-gray-400 hover:text-gray-700"
                       >
                         Tambah Opsi Varian
@@ -1981,7 +2199,6 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
             </Space>
           </div>
         </div>
-      </Form>
 
       <Modal
         title={
@@ -2143,6 +2360,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           </Form>
         </div>
       </Modal>
-    </div>
+      </div>
+    </Form>
   );
 }

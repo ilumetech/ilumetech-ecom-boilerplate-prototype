@@ -236,44 +236,183 @@ export class ProductService {
         data,
       });
 
-      if (options) {
-        // Simple strategy: delete existing and recreate
-        await tx.productOption.deleteMany({ where: { productId: id } });
+      if (options !== undefined) {
+        if (options.length > 0) {
+          const tempIdMap: Record<string, string> = {};
 
-        const tempIdMap: Record<string, string> = {};
-        for (const opt of options) {
-          const createdOpt = await tx.productOption.create({
-            data: {
-              productId: id,
-              name: opt.name,
-              position: opt.position ?? 0,
-            },
-          });
+          // 1. Upsert Options and OptionValues non-destructively
+          for (const opt of options) {
+            let existingOpt = await tx.productOption.findUnique({
+              where: {
+                productId_name: {
+                  productId: id,
+                  name: opt.name,
+                },
+              },
+            });
 
-          if (opt.values) {
-            for (const val of opt.values) {
-              const createdVal = await tx.productOptionValue.create({
+            if (!existingOpt) {
+              existingOpt = await tx.productOption.create({
                 data: {
-                  optionId: createdOpt.id,
-                  value: val.value,
-                  position: val.position ?? 0,
+                  productId: id,
+                  name: opt.name,
+                  position: opt.position ?? 0,
                 },
               });
-              if (val.id) {
-                tempIdMap[val.id] = createdVal.id;
+            } else {
+              await tx.productOption.update({
+                where: { id: existingOpt.id },
+                data: { position: opt.position ?? 0 },
+              });
+            }
+
+            if (opt.values) {
+              for (const val of opt.values) {
+                let existingVal = await tx.productOptionValue.findUnique({
+                  where: {
+                    optionId_value: {
+                      optionId: existingOpt.id,
+                      value: val.value,
+                    },
+                  },
+                });
+
+                if (!existingVal) {
+                  existingVal = await tx.productOptionValue.create({
+                    data: {
+                      optionId: existingOpt.id,
+                      value: val.value,
+                      position: val.position ?? 0,
+                    },
+                  });
+                } else {
+                  await tx.productOptionValue.update({
+                    where: { id: existingVal.id },
+                    data: { position: val.position ?? 0 },
+                  });
+                }
+
+                if (val.id) {
+                  tempIdMap[val.id] = existingVal.id;
+                }
               }
             }
           }
-        }
 
-        if (variants) {
+          // Delete options that are no longer in the incoming payload (defensive)
+          const incomingOptionNames = new Set(options.map((opt) => opt.name));
+          const dbOptions = await tx.productOption.findMany({
+            where: { productId: id },
+          });
+          const optionsToDelete = dbOptions.filter((opt) => !incomingOptionNames.has(opt.name));
+          if (optionsToDelete.length > 0) {
+            await tx.productOption.deleteMany({
+              where: {
+                id: { in: optionsToDelete.map((opt) => opt.id) },
+              },
+            });
+          }
+
+          // 2. Upsert Variants non-destructively
+          if (variants) {
+            const dbVariants = await tx.productVariant.findMany({
+              where: { productId: id },
+            });
+
+            for (const v of variants) {
+              const optionValueIds = [
+                ...(v.optionValueIds ?? []),
+                ...(v.tempOptionValueIds?.map((tid) => tempIdMap[tid]).filter((id): id is string => !!id) ?? []),
+              ];
+
+              const existingVariant = dbVariants.find((dv) => dv.sku === v.sku);
+
+              if (existingVariant) {
+                await tx.productVariant.update({
+                  where: { id: existingVariant.id },
+                  data: {
+                    name: v.name,
+                    price: v.price,
+                    compareAtPrice: v.compareAtPrice,
+                    imageUrl: v.imageUrl,
+                    isDefault: v.isDefault ?? false,
+                    isActive: v.isActive ?? true,
+                  },
+                });
+              } else {
+                await tx.productVariant.create({
+                  data: {
+                    productId: id,
+                    sku: v.sku,
+                    name: v.name,
+                    price: v.price,
+                    compareAtPrice: v.compareAtPrice,
+                    imageUrl: v.imageUrl,
+                    isDefault: v.isDefault ?? false,
+                    isActive: v.isActive ?? true,
+                    optionValues: {
+                      create: optionValueIds.map((ovId) => ({ optionValueId: ovId })),
+                    },
+                  },
+                });
+              }
+            }
+
+            // Delete variants that are no longer in the incoming payload
+            const incomingSkus = new Set(variants.map((v) => v.sku));
+            const variantsToDelete = dbVariants.filter((dv) => !incomingSkus.has(dv.sku));
+            if (variantsToDelete.length > 0) {
+              await tx.productVariant.deleteMany({
+                where: {
+                  id: { in: variantsToDelete.map((dv) => dv.id) },
+                },
+              });
+            }
+          }
+        } else {
+          // Explicitly empty options: clean up all options/variants and recreate default single variant
+          await tx.productOption.deleteMany({ where: { productId: id } });
           await tx.productVariant.deleteMany({ where: { productId: id } });
-          for (const v of variants) {
-            const optionValueIds = [
-              ...(v.optionValueIds ?? []),
-              ...(v.tempOptionValueIds?.map((tid) => tempIdMap[tid]).filter((id): id is string => !!id) ?? []),
-            ];
 
+          if (variants && variants.length > 0) {
+            for (const v of variants) {
+              await tx.productVariant.create({
+                data: {
+                  productId: id,
+                  sku: v.sku,
+                  name: v.name,
+                  price: v.price,
+                  compareAtPrice: v.compareAtPrice,
+                  imageUrl: v.imageUrl,
+                  isDefault: v.isDefault ?? false,
+                  isActive: v.isActive ?? true,
+                },
+              });
+            }
+          }
+        }
+      } else if (variants !== undefined) {
+        // If only variants are sent for update, perform a smart upsert on variants only (preserving IDs)
+        const dbVariants = await tx.productVariant.findMany({
+          where: { productId: id },
+        });
+
+        for (const v of variants) {
+          const existingVariant = dbVariants.find((dv) => dv.sku === v.sku);
+
+          if (existingVariant) {
+            await tx.productVariant.update({
+              where: { id: existingVariant.id },
+              data: {
+                name: v.name,
+                price: v.price,
+                compareAtPrice: v.compareAtPrice,
+                imageUrl: v.imageUrl,
+                isDefault: v.isDefault ?? false,
+                isActive: v.isActive ?? true,
+              },
+            });
+          } else {
             await tx.productVariant.create({
               data: {
                 productId: id,
@@ -285,29 +424,20 @@ export class ProductService {
                 isDefault: v.isDefault ?? false,
                 isActive: v.isActive ?? true,
                 optionValues: {
-                  create: optionValueIds.map((ovId) => ({ optionValueId: ovId })),
+                  create: v.optionValueIds?.map((ovId) => ({ optionValueId: ovId })) ?? [],
                 },
               },
             });
           }
         }
-      } else if (variants) {
-        // If only variants provided
-        await tx.productVariant.deleteMany({ where: { productId: id } });
-        for (const v of variants) {
-          await tx.productVariant.create({
-            data: {
-              productId: id,
-              sku: v.sku,
-              name: v.name,
-              price: v.price,
-              compareAtPrice: v.compareAtPrice,
-              imageUrl: v.imageUrl,
-              isDefault: v.isDefault ?? false,
-              isActive: v.isActive ?? true,
-              optionValues: {
-                create: v.optionValueIds?.map((ovId) => ({ optionValueId: ovId })) ?? [],
-              },
+
+        // Delete variants that are no longer in the incoming payload
+        const incomingSkus = new Set(variants.map((v) => v.sku));
+        const variantsToDelete = dbVariants.filter((dv) => !incomingSkus.has(dv.sku));
+        if (variantsToDelete.length > 0) {
+          await tx.productVariant.deleteMany({
+            where: {
+              id: { in: variantsToDelete.map((dv) => dv.id) },
             },
           });
         }

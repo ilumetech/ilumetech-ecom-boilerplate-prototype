@@ -5,9 +5,9 @@ import {
   BadRequestException,
   UseGuards,
 } from '@nestjs/common';
-import { FastifyRequest } from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import { CloudinaryService } from '../common/cloudinary/cloudinary.service';
-import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
+import { ClerkAuthGuard } from '../common/guards';
 
 @Controller('upload')
 @UseGuards(ClerkAuthGuard)
