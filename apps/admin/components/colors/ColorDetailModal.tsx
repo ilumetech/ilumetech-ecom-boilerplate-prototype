@@ -34,7 +34,12 @@ export function ColorDetailModal({
 
   const footer = [
     <Can key="edit" permission="color:update">
-      <Button type="primary" icon={<EditOutlined />} onClick={handleEditClick} disabled={!color}>
+      <Button
+        type="primary"
+        icon={<EditOutlined />}
+        onClick={handleEditClick}
+        disabled={!color}
+      >
         Edit
       </Button>
     </Can>,
@@ -55,18 +60,20 @@ export function ColorDetailModal({
       )}
       {color && (
         <Descriptions column={1} bordered>
-          <Descriptions.Item label={COLOR_LABELS.name}>{color.name}</Descriptions.Item>
+          <Descriptions.Item label={COLOR_LABELS.name}>
+            {color.name}
+          </Descriptions.Item>
           <Descriptions.Item label={COLOR_LABELS.hexCode}>
             <Space>
               {color.hexCode && (
-                <div 
-                  style={{ 
-                    width: 16, 
-                    height: 16, 
-                    borderRadius: 4, 
+                <div
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 4,
                     backgroundColor: color.hexCode,
-                    border: '1px solid #d9d9d9'
-                  }} 
+                    border: "1px solid #d9d9d9",
+                  }}
                 />
               )}
               {color.hexCode ?? "—"}

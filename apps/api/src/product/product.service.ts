@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { PaginatedResponse, Product } from '@ilumetech/types';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -10,6 +14,7 @@ import {
 
 import type {
   CreateProductDto,
+  CreateProductVariantDto,
   QueryProductDto,
   UpdateProductDto,
 } from './dto';
@@ -73,7 +78,7 @@ const PRODUCT_INCLUDE = {
 
 @Injectable()
 export class ProductService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: QueryProductDto): Promise<PaginatedResponse<Product>> {
     const filters: Record<string, unknown> = {};
@@ -189,7 +194,9 @@ export class ProductService {
         for (const v of dto.variants) {
           const optionValueIds = [
             ...(v.optionValueIds ?? []),
-            ...(v.tempOptionValueIds?.map((tid) => tempIdMap[tid]).filter((id): id is string => !!id) ?? []),
+            ...(v.tempOptionValueIds
+              ?.map((tid) => tempIdMap[tid])
+              .filter((id): id is string => !!id) ?? []),
           ];
 
           await tx.productVariant.create({
@@ -197,10 +204,9 @@ export class ProductService {
               productId,
               sku: v.sku,
               name: v.name,
-              price: v.price,
+              ...this.buildVariantPricingData(v),
               compareAtPrice: v.compareAtPrice,
               imageUrl: v.imageUrl,
-              isDefault: v.isDefault ?? false,
               isActive: v.isActive ?? true,
               optionValues: {
                 create: optionValueIds.map((id) => ({ optionValueId: id })),
@@ -304,7 +310,9 @@ export class ProductService {
           const dbOptions = await tx.productOption.findMany({
             where: { productId: id },
           });
-          const optionsToDelete = dbOptions.filter((opt) => !incomingOptionNames.has(opt.name));
+          const optionsToDelete = dbOptions.filter(
+            (opt) => !incomingOptionNames.has(opt.name),
+          );
           if (optionsToDelete.length > 0) {
             await tx.productOption.deleteMany({
               where: {
@@ -322,7 +330,9 @@ export class ProductService {
             for (const v of variants) {
               const optionValueIds = [
                 ...(v.optionValueIds ?? []),
-                ...(v.tempOptionValueIds?.map((tid) => tempIdMap[tid]).filter((id): id is string => !!id) ?? []),
+                ...(v.tempOptionValueIds
+                  ?.map((tid) => tempIdMap[tid])
+                  .filter((id): id is string => !!id) ?? []),
               ];
 
               const existingVariant = dbVariants.find((dv) => dv.sku === v.sku);
@@ -332,10 +342,9 @@ export class ProductService {
                   where: { id: existingVariant.id },
                   data: {
                     name: v.name,
-                    price: v.price,
+                    ...this.buildVariantPricingData(v),
                     compareAtPrice: v.compareAtPrice,
                     imageUrl: v.imageUrl,
-                    isDefault: v.isDefault ?? false,
                     isActive: v.isActive ?? true,
                   },
                 });
@@ -345,13 +354,14 @@ export class ProductService {
                     productId: id,
                     sku: v.sku,
                     name: v.name,
-                    price: v.price,
+                    ...this.buildVariantPricingData(v),
                     compareAtPrice: v.compareAtPrice,
                     imageUrl: v.imageUrl,
-                    isDefault: v.isDefault ?? false,
                     isActive: v.isActive ?? true,
                     optionValues: {
-                      create: optionValueIds.map((ovId) => ({ optionValueId: ovId })),
+                      create: optionValueIds.map((ovId) => ({
+                        optionValueId: ovId,
+                      })),
                     },
                   },
                 });
@@ -360,7 +370,9 @@ export class ProductService {
 
             // Delete variants that are no longer in the incoming payload
             const incomingSkus = new Set(variants.map((v) => v.sku));
-            const variantsToDelete = dbVariants.filter((dv) => !incomingSkus.has(dv.sku));
+            const variantsToDelete = dbVariants.filter(
+              (dv) => !incomingSkus.has(dv.sku),
+            );
             if (variantsToDelete.length > 0) {
               await tx.productVariant.deleteMany({
                 where: {
@@ -381,10 +393,9 @@ export class ProductService {
                   productId: id,
                   sku: v.sku,
                   name: v.name,
-                  price: v.price,
+                  ...this.buildVariantPricingData(v),
                   compareAtPrice: v.compareAtPrice,
                   imageUrl: v.imageUrl,
-                  isDefault: v.isDefault ?? false,
                   isActive: v.isActive ?? true,
                 },
               });
@@ -405,10 +416,9 @@ export class ProductService {
               where: { id: existingVariant.id },
               data: {
                 name: v.name,
-                price: v.price,
+                ...this.buildVariantPricingData(v),
                 compareAtPrice: v.compareAtPrice,
                 imageUrl: v.imageUrl,
-                isDefault: v.isDefault ?? false,
                 isActive: v.isActive ?? true,
               },
             });
@@ -418,13 +428,15 @@ export class ProductService {
                 productId: id,
                 sku: v.sku,
                 name: v.name,
-                price: v.price,
+                ...this.buildVariantPricingData(v),
                 compareAtPrice: v.compareAtPrice,
                 imageUrl: v.imageUrl,
-                isDefault: v.isDefault ?? false,
                 isActive: v.isActive ?? true,
                 optionValues: {
-                  create: v.optionValueIds?.map((ovId) => ({ optionValueId: ovId })) ?? [],
+                  create:
+                    v.optionValueIds?.map((ovId) => ({
+                      optionValueId: ovId,
+                    })) ?? [],
                 },
               },
             });
@@ -433,7 +445,9 @@ export class ProductService {
 
         // Delete variants that are no longer in the incoming payload
         const incomingSkus = new Set(variants.map((v) => v.sku));
-        const variantsToDelete = dbVariants.filter((dv) => !incomingSkus.has(dv.sku));
+        const variantsToDelete = dbVariants.filter(
+          (dv) => !incomingSkus.has(dv.sku),
+        );
         if (variantsToDelete.length > 0) {
           await tx.productVariant.deleteMany({
             where: {
@@ -499,6 +513,36 @@ export class ProductService {
     return `${prefix}-${String(seq).padStart(6, '0')}`;
   }
 
+  private buildVariantPricingData(variant: CreateProductVariantDto) {
+    const finalPrice = variant.finalPrice ?? variant.price;
+
+    if (finalPrice > variant.price) {
+      throw new BadRequestException(
+        'Final price cannot be greater than base price',
+      );
+    }
+
+    if (variant.discountMode === 'AUTOMATIC' && !variant.discountType) {
+      throw new BadRequestException(
+        'Automatic discounts require a discount type',
+      );
+    }
+
+    if (variant.discountType && variant.discountValue == null) {
+      throw new BadRequestException(
+        'Discount value is required when discount type is provided',
+      );
+    }
+
+    return {
+      price: variant.price,
+      finalPrice,
+      discountType: variant.discountType,
+      discountValue: variant.discountValue,
+      discountMode: variant.discountMode,
+    };
+  }
+
   private mapToResponse(product: ProductWithRelations): Product {
     return {
       id: product.id,
@@ -547,9 +591,12 @@ export class ProductService {
         sku: v.sku,
         name: v.name,
         price: v.price.toNumber(),
+        finalPrice: v.finalPrice.toNumber(),
         compareAtPrice: v.compareAtPrice ? v.compareAtPrice.toNumber() : null,
+        discountType: v.discountType,
+        discountValue: v.discountValue ? v.discountValue.toNumber() : null,
+        discountMode: v.discountMode,
         imageUrl: v.imageUrl,
-        isDefault: v.isDefault,
         isActive: v.isActive,
         optionValues: v.optionValues.map((ov) => ({
           optionName: ov.optionValue.option.name,

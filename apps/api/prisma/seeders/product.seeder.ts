@@ -78,7 +78,7 @@ export async function seedProducts(prisma: PrismaClient) {
         sku: 'TSHIRT-BLK-S',
         name: 'Black / S',
         price: 99000,
-        isDefault: true,
+        finalPrice: 99000,
         isActive: true,
         optionValues: {
           create: [
@@ -99,7 +99,7 @@ export async function seedProducts(prisma: PrismaClient) {
         sku: 'TSHIRT-BLK-M',
         name: 'Black / M',
         price: 99000,
-        isDefault: false,
+        finalPrice: 99000,
         isActive: true,
         optionValues: {
           create: [

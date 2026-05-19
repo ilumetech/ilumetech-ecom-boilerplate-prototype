@@ -1,4 +1,9 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
@@ -19,10 +24,9 @@ export class SensitiveFieldsInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const fieldPermissions = this.reflector.getAllAndOverride<Record<string, string>>(
-      SENSITIVE_FIELDS_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const fieldPermissions = this.reflector.getAllAndOverride<
+      Record<string, string>
+    >(SENSITIVE_FIELDS_KEY, [context.getHandler(), context.getClass()]);
 
     if (!fieldPermissions || Object.keys(fieldPermissions).length === 0) {
       return next.handle();
@@ -33,24 +37,36 @@ export class SensitiveFieldsInterceptor implements NestInterceptor {
     return next.handle().pipe(
       switchMap(async (body) => {
         const userPermissions = await this.resolvePermissions(request);
-        return this.stripSensitiveFields(body, fieldPermissions, userPermissions);
+        return this.stripSensitiveFields(
+          body,
+          fieldPermissions,
+          userPermissions,
+        );
       }),
     );
   }
 
-  private async resolvePermissions(request: SensitiveFieldsRequest): Promise<string[]> {
+  private async resolvePermissions(
+    request: SensitiveFieldsRequest,
+  ): Promise<string[]> {
     if (request.resolvedPermissions) return request.resolvedPermissions;
     if (!request.user?.sub) return [];
 
-    const permissions = await this.fetchPermissionsFromDatabase(request.user.sub);
+    const permissions = await this.fetchPermissionsFromDatabase(
+      request.user.sub,
+    );
     request.resolvedPermissions = permissions;
     return permissions;
   }
 
-  private async fetchPermissionsFromDatabase(clerkUserId: string): Promise<string[]> {
+  private async fetchPermissionsFromDatabase(
+    clerkUserId: string,
+  ): Promise<string[]> {
     const user = await this.prisma.user.findUnique({
       where: { id: clerkUserId },
-      include: { role: { include: { permissions: { include: { permission: true } } } } },
+      include: {
+        role: { include: { permissions: { include: { permission: true } } } },
+      },
     });
 
     if (!user?.role) return [];
@@ -69,11 +85,29 @@ export class SensitiveFieldsInterceptor implements NestInterceptor {
     const wrapped = body as Record<string, unknown>;
 
     if ('data' in wrapped && Array.isArray(wrapped.data)) {
-      return { ...wrapped, data: this.stripFromList(wrapped.data, fieldPermissions, userPermissions) };
+      return {
+        ...wrapped,
+        data: this.stripFromList(
+          wrapped.data,
+          fieldPermissions,
+          userPermissions,
+        ),
+      };
     }
 
-    if ('data' in wrapped && wrapped.data !== null && typeof wrapped.data === 'object') {
-      return { ...wrapped, data: this.stripFromObject(wrapped.data, fieldPermissions, userPermissions) };
+    if (
+      'data' in wrapped &&
+      wrapped.data !== null &&
+      typeof wrapped.data === 'object'
+    ) {
+      return {
+        ...wrapped,
+        data: this.stripFromObject(
+          wrapped.data,
+          fieldPermissions,
+          userPermissions,
+        ),
+      };
     }
 
     return this.stripFromObject(body, fieldPermissions, userPermissions);
@@ -84,7 +118,9 @@ export class SensitiveFieldsInterceptor implements NestInterceptor {
     fieldPermissions: Record<string, string>,
     userPermissions: string[],
   ): unknown[] {
-    return items.map((item) => this.stripFromObject(item, fieldPermissions, userPermissions));
+    return items.map((item) =>
+      this.stripFromObject(item, fieldPermissions, userPermissions),
+    );
   }
 
   private stripFromObject(
@@ -94,7 +130,10 @@ export class SensitiveFieldsInterceptor implements NestInterceptor {
   ): unknown {
     if (!item || typeof item !== 'object') return item;
 
-    const fieldsToRemove = this.resolveFieldsToStrip(fieldPermissions, userPermissions);
+    const fieldsToRemove = this.resolveFieldsToStrip(
+      fieldPermissions,
+      userPermissions,
+    );
     const record = item as Record<string, unknown>;
 
     return Object.fromEntries(
@@ -107,7 +146,10 @@ export class SensitiveFieldsInterceptor implements NestInterceptor {
     userPermissions: string[],
   ): string[] {
     return Object.entries(fieldPermissions)
-      .filter(([, requiredPermission]) => !userPermissions.includes(requiredPermission))
+      .filter(
+        ([, requiredPermission]) =>
+          !userPermissions.includes(requiredPermission),
+      )
       .map(([fieldName]) => fieldName);
   }
 }

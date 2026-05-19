@@ -26,7 +26,7 @@ export class UploadController {
     }
 
     const buffer = await data.toBuffer();
-    
+
     try {
       const result = await this.cloudinaryService.uploadFile(buffer);
       return {

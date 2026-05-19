@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { verifyToken } from '@clerk/backend';
 import type { ClerkUser, AuthenticatedRequest } from '../types/clerk.types';
 
@@ -25,7 +30,9 @@ export class ClerkAuthGuard implements CanActivate {
 
   private async verifyClerkToken(token: string): Promise<ClerkUser> {
     try {
-      const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY! });
+      const payload = await verifyToken(token, {
+        secretKey: process.env.CLERK_SECRET_KEY!,
+      });
       return payload as ClerkUser;
     } catch {
       throw new UnauthorizedException('Invalid or expired token');

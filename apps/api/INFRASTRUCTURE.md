@@ -85,7 +85,7 @@ export class ProductService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.product.findMany()
+    return this.prisma.product.findMany();
   }
 }
 ```
@@ -195,6 +195,7 @@ Accepts one or more permission strings — user must have ALL of them.
 Registered globally in `main.ts`. Catches every exception thrown anywhere in the app.
 
 **Output shape for all errors:**
+
 ```json
 {
   "error": "BadRequestException",
@@ -204,6 +205,7 @@ Registered globally in `main.ts`. Catches every exception thrown anywhere in the
 ```
 
 For `ValidationPipe` errors, `message` is an array:
+
 ```json
 {
   "error": "Bad Request",
@@ -224,11 +226,13 @@ Unknown/unexpected exceptions always return `500 Internal Server Error`.
 Registered globally in `main.ts`. Wraps every controller return value in `{ data }`.
 
 **Single item** — controller returns `product`:
+
 ```json
 { "data": { "id": 1, "name": "Widget" } }
 ```
 
 **List with pagination** — service returns `{ data: products, meta: {...} }` (already has `data` key → not double-wrapped):
+
 ```json
 {
   "data": [{ "id": 1 }, { "id": 2 }],
@@ -247,13 +251,13 @@ This means **list services must return `{ data, meta }` themselves**.
 
 Base class for all list endpoint query parameters. Extend it per-module.
 
-| Field       | Type             | Default | Constraints          |
-|-------------|------------------|---------|----------------------|
-| `search`    | string (optional)| —       | —                    |
-| `sortBy`    | string (optional)| —       | —                    |
-| `sortOrder` | `'asc'` \| `'desc'` | —  | one of asc/desc      |
-| `page`      | number (optional)| `1`     | integer, min 1       |
-| `limit`     | number (optional)| `10`    | integer, min 1, max 100 |
+| Field       | Type                | Default | Constraints             |
+| ----------- | ------------------- | ------- | ----------------------- |
+| `search`    | string (optional)   | —       | —                       |
+| `sortBy`    | string (optional)   | —       | —                       |
+| `sortOrder` | `'asc'` \| `'desc'` | —       | one of asc/desc         |
+| `page`      | number (optional)   | `1`     | integer, min 1          |
+| `limit`     | number (optional)   | `10`    | integer, min 1, max 100 |
 
 ```typescript
 // Extend for module-specific filters:
@@ -279,13 +283,13 @@ findAll(@Query() query: QueryProductDto) {
 Three things are registered globally:
 
 ```typescript
-app.useGlobalFilters(new GlobalExceptionFilter())
+app.useGlobalFilters(new GlobalExceptionFilter());
 // → All errors formatted as { error, message, statusCode }
 
-app.useGlobalInterceptors(new ResponseTransformInterceptor())
+app.useGlobalInterceptors(new ResponseTransformInterceptor());
 // → All responses wrapped as { data } or { data, meta }
 
-app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }))
+app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 // → All DTOs validated; unknown fields stripped; @Type() transforms applied
 ```
 
@@ -320,11 +324,11 @@ The `GlobalExceptionFilter`, `ResponseTransformInterceptor`, and `ValidationPipe
 
 ## Environment Variables
 
-| Variable               | Purpose                                 |
-|------------------------|-----------------------------------------|
-| `DATABASE_URL`         | Neon PostgreSQL connection string       |
-| `CLERK_PUBLISHABLE_KEY`| Clerk frontend key (used by web app)    |
-| `CLERK_SECRET_KEY`     | Clerk secret key — JWT verification     |
-| `PORT`                 | Server port (default: 3001)             |
+| Variable                | Purpose                              |
+| ----------------------- | ------------------------------------ |
+| `DATABASE_URL`          | Neon PostgreSQL connection string    |
+| `CLERK_PUBLISHABLE_KEY` | Clerk frontend key (used by web app) |
+| `CLERK_SECRET_KEY`      | Clerk secret key — JWT verification  |
+| `PORT`                  | Server port (default: 3001)          |
 
 See `.env.example` for the required format.

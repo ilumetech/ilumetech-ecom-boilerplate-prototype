@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,9 +22,12 @@ export class PermissionsGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const userPermissions = await this.resolveUserPermissions(request);
-    const hasAllPermissions = requiredPermissions.every((p) => userPermissions.includes(p));
+    const hasAllPermissions = requiredPermissions.every((p) =>
+      userPermissions.includes(p),
+    );
 
-    if (!hasAllPermissions) throw new ForbiddenException('Insufficient permissions');
+    if (!hasAllPermissions)
+      throw new ForbiddenException('Insufficient permissions');
     return true;
   }
 
@@ -32,18 +40,26 @@ export class PermissionsGuard implements CanActivate {
     );
   }
 
-  private async resolveUserPermissions(request: AuthenticatedRequest): Promise<string[]> {
+  private async resolveUserPermissions(
+    request: AuthenticatedRequest,
+  ): Promise<string[]> {
     if (request.resolvedPermissions) return request.resolvedPermissions;
 
-    const userPermissions = await this.fetchPermissionsFromDatabase(request.user.sub);
+    const userPermissions = await this.fetchPermissionsFromDatabase(
+      request.user.sub,
+    );
     request.resolvedPermissions = userPermissions;
     return userPermissions;
   }
 
-  private async fetchPermissionsFromDatabase(clerkUserId: string): Promise<string[]> {
+  private async fetchPermissionsFromDatabase(
+    clerkUserId: string,
+  ): Promise<string[]> {
     const user = await this.prisma.user.findUnique({
       where: { id: clerkUserId },
-      include: { role: { include: { permissions: { include: { permission: true } } } } },
+      include: {
+        role: { include: { permissions: { include: { permission: true } } } },
+      },
     });
 
     if (!user?.role) throw new ForbiddenException('No role assigned to user');

@@ -1,5 +1,5 @@
-import { apiClient } from './client';
-import type { ApiResponse } from '@ilumetech/types';
+import { apiClient } from "./client";
+import type { ApiResponse } from "@ilumetech/types";
 
 export interface UserStats {
   active: number;
@@ -8,7 +8,9 @@ export interface UserStats {
 }
 
 async function getStats(): Promise<UserStats> {
-  const response = await apiClient.get<ApiResponse<UserStats>>('/dashboard/user-stats');
+  const response = await apiClient.get<ApiResponse<UserStats>>(
+    "/dashboard/user-stats",
+  );
   return response.data.data;
 }
 

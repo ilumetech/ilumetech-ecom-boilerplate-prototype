@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth-store';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/auth-store";
 
 interface PermissionGateProps {
   permission: string;
@@ -16,7 +16,7 @@ export function PermissionGate({ permission, children }: PermissionGateProps) {
 
   useEffect(() => {
     if (!isLoading && !hasPermission(permission)) {
-      router.replace('/unauthorized');
+      router.replace("/unauthorized");
     }
   }, [isLoading, hasPermission, permission, router]);
 

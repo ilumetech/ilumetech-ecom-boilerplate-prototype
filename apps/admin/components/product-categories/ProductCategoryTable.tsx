@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { App, Button, Input, Space, Table, Tag } from "antd";
-import { EditOutlined, DeleteOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TableColumnsType, TablePaginationConfig } from "antd";
 import type { SorterResult, FilterValue } from "antd/es/table/interface";
@@ -28,7 +33,10 @@ export function ProductCategoryTable() {
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
   const [editTarget, setEditTarget] = useState<ProductCategory | null>(null);
-  const [queryParams, setQueryParams] = useState<ProductCategoryQueryParams>({ page: 1, limit: 10 });
+  const [queryParams, setQueryParams] = useState<ProductCategoryQueryParams>({
+    page: 1,
+    limit: 10,
+  });
 
   const detailCategoryId = searchParams.get("detail");
 
@@ -45,7 +53,9 @@ export function ProductCategoryTable() {
   const removeMutation = useMutation({
     mutationFn: (id: string) => productCategoryApi.remove(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["productCategories", "list"] });
+      queryClient.invalidateQueries({
+        queryKey: ["productCategories", "list"],
+      });
       message.success("Kategori berhasil dihapus");
     },
     onError: handleError,
@@ -125,7 +135,11 @@ export function ProductCategoryTable() {
       <div className="flex justify-between mb-4">
         <Space>
           <Can permission={PERMISSIONS.PRODUCT_CATEGORY.CREATE}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleOpenCreate}
+            >
               Tambah Kategori Produk
             </Button>
           </Can>
@@ -188,7 +202,10 @@ function mapSortOrder(
   return undefined;
 }
 
-function buildTableColumns({ onEdit, onDelete }: ColumnBuilderParams): TableColumnsType<ProductCategory> {
+function buildTableColumns({
+  onEdit,
+  onDelete,
+}: ColumnBuilderParams): TableColumnsType<ProductCategory> {
   return [
     {
       title: PRODUCT_CATEGORY_LABELS.name,
@@ -224,7 +241,11 @@ function buildTableColumns({ onEdit, onDelete }: ColumnBuilderParams): TableColu
       render: (_: unknown, record: ProductCategory) => (
         <Space size="small" onClick={(e) => e.stopPropagation()}>
           <Can permission={PERMISSIONS.PRODUCT_CATEGORY.UPDATE}>
-            <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(record)}
+            />
           </Can>
           <Can permission={PERMISSIONS.PRODUCT_CATEGORY.DELETE}>
             <Button

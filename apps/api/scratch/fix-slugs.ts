@@ -5,17 +5,20 @@ const prisma = new PrismaClient();
 async function main() {
   const products = await prisma.product.findMany({
     where: {
-      slug: null as any
-    }
+      slug: null as any,
+    },
   });
 
   console.log(`Found ${products.length} products with null slug`);
 
   for (const product of products) {
-    const slug = product.name.toLowerCase().replace(/ /g, '-') + '-' + product.id.slice(-4);
+    const slug =
+      product.name.toLowerCase().replace(/ /g, '-') +
+      '-' +
+      product.id.slice(-4);
     await prisma.product.update({
       where: { id: product.id },
-      data: { slug }
+      data: { slug },
     });
     console.log(`Updated product ${product.id} with slug ${slug}`);
   }

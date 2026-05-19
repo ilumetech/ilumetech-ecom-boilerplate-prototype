@@ -7,7 +7,9 @@ export default function ColorsPage() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-xl font-semibold m-0">Warna</h1>
-        <p className="text-sm text-gray-500 mt-1">Lihat dan kelola warna produk di sistem.</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Lihat dan kelola warna produk di sistem.
+        </p>
       </div>
       <PermissionGate permission="color:read">
         <Suspense fallback={<div>Memuat...</div>}>

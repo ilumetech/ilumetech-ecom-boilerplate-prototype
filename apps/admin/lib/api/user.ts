@@ -1,5 +1,10 @@
-import { apiClient } from './client';
-import type { AppUser, AppUserMe, PaginatedResponse, ApiResponse } from '@ilumetech/types';
+import { apiClient } from "./client";
+import type {
+  AppUser,
+  AppUserMe,
+  PaginatedResponse,
+  ApiResponse,
+} from "@ilumetech/types";
 
 interface CreateUserPayload {
   username: string;
@@ -23,27 +28,44 @@ export interface UserQueryParams {
   limit?: number;
   search?: string;
   sortField?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   isActive?: boolean;
 }
 
-async function getUsers(params?: UserQueryParams): Promise<PaginatedResponse<AppUser>> {
-  const response = await apiClient.get<PaginatedResponse<AppUser>>('/users', { params });
+async function getUsers(
+  params?: UserQueryParams,
+): Promise<PaginatedResponse<AppUser>> {
+  const response = await apiClient.get<PaginatedResponse<AppUser>>("/users", {
+    params,
+  });
   return response.data;
 }
 
 async function getUser(userId: string): Promise<AppUser> {
-  const response = await apiClient.get<ApiResponse<AppUser>>(`/users/${userId}`);
+  const response = await apiClient.get<ApiResponse<AppUser>>(
+    `/users/${userId}`,
+  );
   return response.data.data;
 }
 
-async function createUser(payload: CreateUserPayload): Promise<ApiResponse<AppUser>> {
-  const response = await apiClient.post<ApiResponse<AppUser>>('/users/invite', payload);
+async function createUser(
+  payload: CreateUserPayload,
+): Promise<ApiResponse<AppUser>> {
+  const response = await apiClient.post<ApiResponse<AppUser>>(
+    "/users/invite",
+    payload,
+  );
   return response.data;
 }
 
-async function updateUser(userId: string, payload: UpdateUserPayload): Promise<ApiResponse<AppUser>> {
-  const response = await apiClient.patch<ApiResponse<AppUser>>(`/users/${userId}`, payload);
+async function updateUser(
+  userId: string,
+  payload: UpdateUserPayload,
+): Promise<ApiResponse<AppUser>> {
+  const response = await apiClient.patch<ApiResponse<AppUser>>(
+    `/users/${userId}`,
+    payload,
+  );
   return response.data;
 }
 
@@ -52,8 +74,15 @@ async function removeUser(userId: string): Promise<void> {
 }
 
 async function getMe(): Promise<AppUserMe> {
-  const response = await apiClient.get<ApiResponse<AppUserMe>>('/users/me');
+  const response = await apiClient.get<ApiResponse<AppUserMe>>("/users/me");
   return response.data.data;
 }
 
-export const userApi = { getMe, getUsers, getUser, createUser, updateUser, removeUser };
+export const userApi = {
+  getMe,
+  getUsers,
+  getUser,
+  createUser,
+  updateUser,
+  removeUser,
+};

@@ -1,3 +1,9 @@
+try {
+  process.loadEnvFile();
+} catch (error) {
+  // Ignore error if .env file is missing (e.g. in production/CI environment)
+}
+
 import { NestFactory } from '@nestjs/core';
 import {
   FastifyAdapter,

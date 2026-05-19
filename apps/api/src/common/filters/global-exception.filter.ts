@@ -1,4 +1,10 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { FastifyReply } from 'fastify';
 
@@ -38,18 +44,31 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const reply = host.switchToHttp().getResponse<FastifyReply>();
     const { statusCode, error } = this.resolveError(exception);
-    reply.status(statusCode).send({ data: null, error } satisfies ErrorResponse);
+    reply
+      .status(statusCode)
+      .send({ data: null, error } satisfies ErrorResponse);
   }
 
-  private resolveError(exception: unknown): { statusCode: number; error: string } {
-    if (exception instanceof HttpException) return this.handleHttpException(exception);
-    if (exception instanceof Prisma.PrismaClientKnownRequestError) return this.handlePrismaError(exception);
+  private resolveError(exception: unknown): {
+    statusCode: number;
+    error: string;
+  } {
+    if (exception instanceof HttpException)
+      return this.handleHttpException(exception);
+    if (exception instanceof Prisma.PrismaClientKnownRequestError)
+      return this.handlePrismaError(exception);
 
     console.error('[GlobalExceptionFilter] Unknown error:', exception);
-    return { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, error: FALLBACK_MESSAGE };
+    return {
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      error: FALLBACK_MESSAGE,
+    };
   }
 
-  private handleHttpException(exception: HttpException): { statusCode: number; error: string } {
+  private handleHttpException(exception: HttpException): {
+    statusCode: number;
+    error: string;
+  } {
     const statusCode = exception.getStatus();
     const response = exception.getResponse();
 
@@ -60,24 +79,35 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const body = response as Record<string, unknown>;
 
     if (Array.isArray(body.message)) {
-      return { statusCode: HttpStatus.BAD_REQUEST, error: String(body.message[0]) };
+      return {
+        statusCode: HttpStatus.BAD_REQUEST,
+        error: String(body.message[0]),
+      };
     }
 
     return { statusCode, error: HTTP_MESSAGES[statusCode] ?? FALLBACK_MESSAGE };
   }
 
-  private handlePrismaError(
-    exception: Prisma.PrismaClientKnownRequestError,
-  ): { statusCode: number; error: string } {
+  private handlePrismaError(exception: Prisma.PrismaClientKnownRequestError): {
+    statusCode: number;
+    error: string;
+  } {
     const error = PRISMA_MESSAGES[exception.code];
 
     if (!error) {
-      console.error('[GlobalExceptionFilter] Unhandled Prisma error:', exception);
-      return { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, error: FALLBACK_MESSAGE };
+      console.error(
+        '[GlobalExceptionFilter] Unhandled Prisma error:',
+        exception,
+      );
+      return {
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: FALLBACK_MESSAGE,
+      };
     }
 
     return {
-      statusCode: PRISMA_STATUS[exception.code] ?? HttpStatus.INTERNAL_SERVER_ERROR,
+      statusCode:
+        PRISMA_STATUS[exception.code] ?? HttpStatus.INTERNAL_SERVER_ERROR,
       error,
     };
   }

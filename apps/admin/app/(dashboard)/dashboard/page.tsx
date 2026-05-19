@@ -1,7 +1,7 @@
-import { Suspense } from 'react';
-import { PERMISSIONS } from '@ilumetech/types';
-import { PermissionGate } from '@/components/auth/PermissionGate';
-import UserStatusChart from '@/components/dashboard/UserStatusChart';
+import { Suspense } from "react";
+import { PERMISSIONS } from "@ilumetech/types";
+import { PermissionGate } from "@/components/auth/PermissionGate";
+import UserStatusChart from "@/components/dashboard/UserStatusChart";
 
 export default function DashboardPage() {
   return (

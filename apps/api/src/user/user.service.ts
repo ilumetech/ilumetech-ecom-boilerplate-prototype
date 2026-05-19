@@ -18,12 +18,16 @@ import type { UserQueryDto } from './dto/user-query.dto';
 type UserWithRole = Prisma.UserGetPayload<{ include: { role: true } }>;
 
 type UserWithRoleAndPermissions = Prisma.UserGetPayload<{
-  include: { role: { include: { permissions: { include: { permission: true } } } } };
+  include: {
+    role: { include: { permissions: { include: { permission: true } } } };
+  };
 }>;
 
 @Injectable()
 export class UserService {
-  private readonly clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
+  private readonly clerk = createClerkClient({
+    secretKey: process.env.CLERK_SECRET_KEY!,
+  });
 
   // Error throwing pattern — use NestJS exceptions, never raw Error:
   // ✓ throw new ConflictException('Transaksi sudah ada, produk tidak bisa dihapus.')
@@ -38,19 +42,25 @@ export class UserService {
   async findMe(clerkUserId: string): Promise<AppUserMe> {
     let user = await this.prisma.user.findUnique({
       where: { id: clerkUserId },
-      include: { role: { include: { permissions: { include: { permission: true } } } } },
+      include: {
+        role: { include: { permissions: { include: { permission: true } } } },
+      },
     });
 
     // If user not in DB, sync from Clerk (this handles users who signed up before the DB sync was ready)
     if (!user) {
-      const clerkUser = await this.callClerk(() => this.clerk.users.getUser(clerkUserId));
+      const clerkUser = await this.callClerk(() =>
+        this.clerk.users.getUser(clerkUserId),
+      );
       await this.syncClerkUserToPostgres(clerkUser);
-      
+
       // Fetch again with permissions
-      user = await this.prisma.user.findUnique({
+      user = (await this.prisma.user.findUnique({
         where: { id: clerkUserId },
-        include: { role: { include: { permissions: { include: { permission: true } } } } },
-      }) as UserWithRoleAndPermissions;
+        include: {
+          role: { include: { permissions: { include: { permission: true } } } },
+        },
+      })) as UserWithRoleAndPermissions;
     }
 
     if (!user) throw new NotFoundException(`User ${clerkUserId} not found`);
@@ -58,7 +68,8 @@ export class UserService {
   }
 
   async findAll(query: UserQueryDto): Promise<PaginatedResponse<AppUser>> {
-    const filters = query.isActive !== undefined ? { isActive: query.isActive } : {};
+    const filters =
+      query.isActive !== undefined ? { isActive: query.isActive } : {};
 
     const { skip, take, where, orderBy } = buildPrismaQuery({
       search: query.search,
@@ -72,7 +83,13 @@ export class UserService {
     });
 
     const [users, total] = await Promise.all([
-      this.prisma.user.findMany({ skip, take, where, orderBy, include: { role: true } }),
+      this.prisma.user.findMany({
+        skip,
+        take,
+        where,
+        orderBy,
+        include: { role: true },
+      }),
       this.prisma.user.count({ where }),
     ]);
 
@@ -137,15 +154,26 @@ export class UserService {
   async getUserRoles(clerkUserId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: clerkUserId },
-      include: { role: { include: { permissions: { include: { permission: true } } } } },
+      include: {
+        role: { include: { permissions: { include: { permission: true } } } },
+      },
     });
 
     if (!user?.role) return [];
-    return [{ clerkUserId: user.id, roleId: user.roleId, role: user.role, createdAt: user.createdAt }];
+    return [
+      {
+        clerkUserId: user.id,
+        roleId: user.roleId,
+        role: user.role,
+        createdAt: user.createdAt,
+      },
+    ];
   }
 
   async assignRole(clerkUserId: string, dto: AssignRoleDto) {
-    const user = await this.prisma.user.findUnique({ where: { id: clerkUserId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: clerkUserId },
+    });
     if (!user) throw new NotFoundException(`User ${clerkUserId} not found`);
 
     return this.prisma.user.update({
@@ -156,9 +184,14 @@ export class UserService {
   }
 
   async removeRole(clerkUserId: string, roleId: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id: clerkUserId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: clerkUserId },
+    });
     if (!user) throw new NotFoundException(`User ${clerkUserId} not found`);
-    if (user.roleId !== roleId) throw new NotFoundException(`Role ${roleId} not assigned to user ${clerkUserId}`);
+    if (user.roleId !== roleId)
+      throw new NotFoundException(
+        `Role ${roleId} not assigned to user ${clerkUserId}`,
+      );
 
     await this.prisma.user.update({
       where: { id: clerkUserId },
@@ -168,7 +201,10 @@ export class UserService {
 
   // ─── Private helpers ──────────────────────────────────────────────────────
 
-  private async syncClerkUserToPostgres(clerkUser: ClerkUser, roleId?: string): Promise<UserWithRole> {
+  private async syncClerkUserToPostgres(
+    clerkUser: ClerkUser,
+    roleId?: string,
+  ): Promise<UserWithRole> {
     const primaryEmail = clerkUser.emailAddresses.find(
       (e) => e.id === clerkUser.primaryEmailAddressId,
     );
@@ -178,7 +214,9 @@ export class UserService {
     if (!effectiveRoleId) {
       const userCount = await this.prisma.user.count();
       if (userCount === 0) {
-        const adminRole = await this.prisma.role.findUnique({ where: { name: 'admin' } });
+        const adminRole = await this.prisma.role.findUnique({
+          where: { name: 'admin' },
+        });
         if (adminRole) effectiveRoleId = adminRole.id;
       }
     }
@@ -196,23 +234,36 @@ export class UserService {
     return this.prisma.user.upsert({
       where: { id: clerkUser.id },
       update: data,
-      create: { id: clerkUser.id, createdAt: new Date(clerkUser.createdAt), ...data },
+      create: {
+        id: clerkUser.id,
+        createdAt: new Date(clerkUser.createdAt),
+        ...data,
+      },
       include: { role: true },
     });
   }
 
-  private async applyClerkUpdates(userId: string, dto: UpdateUserDto): Promise<void> {
+  private async applyClerkUpdates(
+    userId: string,
+    dto: UpdateUserDto,
+  ): Promise<void> {
     const hasClerkFields =
-      dto.firstName !== undefined || dto.lastName !== undefined || dto.username !== undefined;
+      dto.firstName !== undefined ||
+      dto.lastName !== undefined ||
+      dto.username !== undefined;
 
     const ops: Promise<void>[] = [];
     if (hasClerkFields) ops.push(this.updateClerkFields(userId, dto));
-    if (dto.isActive !== undefined) ops.push(this.updateActiveStatus(userId, dto.isActive));
+    if (dto.isActive !== undefined)
+      ops.push(this.updateActiveStatus(userId, dto.isActive));
 
     await Promise.all(ops);
   }
 
-  private async updateActiveStatus(userId: string, isActive: boolean): Promise<void> {
+  private async updateActiveStatus(
+    userId: string,
+    isActive: boolean,
+  ): Promise<void> {
     if (isActive) {
       await this.callClerk(() => this.clerk.users.unbanUser(userId));
       return;
@@ -220,7 +271,10 @@ export class UserService {
     await this.callClerk(() => this.clerk.users.banUser(userId));
   }
 
-  private async updateClerkFields(userId: string, dto: UpdateUserDto): Promise<void> {
+  private async updateClerkFields(
+    userId: string,
+    dto: UpdateUserDto,
+  ): Promise<void> {
     await this.callClerk(() =>
       this.clerk.users.updateUser(userId, {
         firstName: dto.firstName,
@@ -231,7 +285,8 @@ export class UserService {
   }
 
   private mapPrismaUserMe(user: UserWithRoleAndPermissions): AppUserMe {
-    const permissionNames = user.role?.permissions.map((rp) => rp.permission.action) ?? [];
+    const permissionNames =
+      user.role?.permissions.map((rp) => rp.permission.action) ?? [];
     return {
       id: user.id,
       email: user.email,

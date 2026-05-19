@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient } from "./client";
 
 export interface MeData {
   clerkUserId: string;
@@ -9,7 +9,7 @@ export interface MeData {
 }
 
 async function getMe(): Promise<MeData> {
-  const response = await apiClient.get<{ data: MeData }>('/auth/me');
+  const response = await apiClient.get<{ data: MeData }>("/auth/me");
   return response.data.data;
 }
 

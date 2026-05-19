@@ -11,7 +11,6 @@ import {
   Input,
   InputNumber,
   Modal,
-  Radio,
   Select,
   Space,
   Switch,
@@ -27,15 +26,20 @@ import {
   PlusOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
-import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   useSortable,
   horizontalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { productApi } from "@/lib/api/product";
 import { productCategoryApi } from "@/lib/api/product-category";
@@ -68,12 +72,15 @@ interface FormVariant {
   sku: string;
   name: string;
   price: number;
+  finalPrice?: number;
   compareAtPrice?: number;
+  discountType?: DiscountType | null;
+  discountValue?: number | null;
+  discountMode?: DiscountMode | null;
   optionValues: { optionName: string; value: string }[];
   optionValueIds?: string[];
   tempOptionValueIds?: string[];
   isActive: boolean;
-  isDefault: boolean;
   imageUrl?: string;
 }
 
@@ -85,6 +92,10 @@ interface FormValues {
   productCategoryId: string;
   unitId: string;
   sellingPrice: number;
+  finalPrice?: number;
+  discountType?: DiscountType | null;
+  discountValue?: number | null;
+  discountMode?: DiscountMode | null;
   purchasePrice?: number;
   weightGram?: number;
   isActive: boolean;
@@ -99,6 +110,21 @@ const RUPIAH_FORMATTER = {
     value !== undefined ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "",
   parser: (value: string | undefined) => Number(value?.replace(/\./g, "") ?? 0),
 };
+
+type DiscountType = "PERCENTAGE" | "FIXED_AMOUNT";
+type DiscountMode = "AUTOMATIC" | "MANUAL";
+
+function calculateDiscountedPrice(
+  price: number,
+  discountType: DiscountType,
+  discountValue: number,
+): number {
+  if (discountType === "PERCENTAGE") {
+    return Math.max(0, Math.round(price - (price * discountValue) / 100));
+  }
+
+  return Math.max(0, price - discountValue);
+}
 
 const PRESET_OPTIONS = [
   { label: "Warna", value: "Warna" },
@@ -138,29 +164,43 @@ interface DraggableUploadListItemProps {
   isFirst: boolean;
 }
 
-const DraggableUploadListItem = ({ originNode, file, isFirst }: DraggableUploadListItemProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+const DraggableUploadListItem = ({
+  originNode,
+  file,
+  isFirst,
+}: DraggableUploadListItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: file.uid,
   });
 
   const style: React.CSSProperties = {
     transform: CSS.Translate.toString(transform),
     transition,
-    cursor: 'move',
-    position: 'relative',
+    cursor: "move",
+    position: "relative",
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={isDragging ? 'z-50' : ''}
+      className={isDragging ? "z-50" : ""}
       {...attributes}
       {...listeners}
     >
       {isFirst && file.status === "done" && (
         <div className="absolute top-1 left-1 z-20">
-          <Tag color="blue" className="m-0 text-[10px] font-bold uppercase shadow-sm">
+          <Tag
+            color="blue"
+            className="m-0 text-[10px] font-bold uppercase shadow-sm"
+          >
             Utama
           </Tag>
         </div>
@@ -186,7 +226,11 @@ function parseSizeRun(input: string): FormOptionValue[] {
       const startStr = rangeParts[0];
       const endStr = rangeParts[1];
 
-      if (rangeParts.length === 2 && startStr !== undefined && endStr !== undefined) {
+      if (
+        rangeParts.length === 2 &&
+        startStr !== undefined &&
+        endStr !== undefined
+      ) {
         const start = parseInt(startStr);
         const end = parseInt(endStr);
 
@@ -205,6 +249,112 @@ function parseSizeRun(input: string): FormOptionValue[] {
   const uniqueResults = Array.from(new Set(results));
 
   return uniqueResults.map((v) => ({ label: v, value: v }));
+}
+
+interface SizeRunInputProps {
+  value?: FormOptionValue[];
+  onChange?: (val: FormOptionValue[]) => void;
+  isEditMode: boolean;
+  product?: any;
+}
+
+function SizeRunInput({
+  value = [],
+  onChange,
+  isEditMode,
+  product,
+}: SizeRunInputProps) {
+  const [inputValue, setInputValue] = useState("");
+
+  const handleAdd = () => {
+    const trimmed = inputValue.trim();
+    if (!trimmed) return;
+    const newParsed = parseSizeRun(trimmed);
+    if (newParsed.length === 0) return;
+
+    const existingLabels = new Set(
+      value.map((v) => v.label.trim().toLowerCase()),
+    );
+    const uniqueNew = newParsed.filter(
+      (v) => !existingLabels.has(v.label.trim().toLowerCase()),
+    );
+
+    if (uniqueNew.length > 0) {
+      const nextValue = [...value, ...uniqueNew];
+      onChange?.(nextValue);
+    }
+    setInputValue("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      handleAdd();
+    }
+  };
+
+  const dbOption = product?.options?.find((o: any) => o.name === "Size (Run)");
+  const savedValuesSet = new Set(
+    dbOption?.values.map((v: any) => v.value.trim().toLowerCase()) || [],
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <Input
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleAdd}
+          placeholder="Masukkan ukuran baru (contoh: 46-50 atau 45) lalu tekan Enter"
+        />
+        <Button onClick={handleAdd} type="primary">
+          Tambah
+        </Button>
+      </div>
+
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {value.map((size) => {
+            const isSaved =
+              isEditMode && savedValuesSet.has(size.label.trim().toLowerCase());
+            return (
+              <div
+                key={size.label}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-sm font-medium transition-all ${
+                  isSaved
+                    ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed select-none"
+                    : "bg-blue-50/50 border-blue-200 text-blue-700 hover:bg-blue-100/50"
+                }`}
+                title={
+                  isSaved
+                    ? "Nilai opsi yang sudah disimpan tidak dapat dihapus untuk menjaga integritas data"
+                    : undefined
+                }
+              >
+                {isSaved && <span className="text-xs">🔒</span>}
+                <span>{size.label}</span>
+                {!isSaved && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextValue = value.filter(
+                        (s) => s.label !== size.label,
+                      );
+                      onChange?.(nextValue);
+                    }}
+                    className="hover:text-blue-900 focus:outline-none font-bold text-xs ml-1 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ProductForm({ mode, productId }: ProductFormProps) {
@@ -231,7 +381,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   const [priceScheme, setPriceScheme] = useState<string | null>(null);
   const [sizePrices, setSizePrices] = useState<Record<string, number>>({});
   const [colorPrices, setColorPrices] = useState<Record<string, number>>({});
-  const [variantImages, setVariantImages] = useState<Record<string, string>>({});
+  const [variantImages, setVariantImages] = useState<Record<string, string>>(
+    {},
+  );
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -258,9 +410,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       const oldIndex = fileList.findIndex((item) => item.uid === active.id);
       const newIndex = fileList.findIndex((item) => item.uid === over?.id);
       const newFileList = arrayMove(fileList, oldIndex, newIndex);
-      
+
       setFileList(newFileList);
-      
+
       // Update form values
       const images = newFileList
         .filter((file) => file.status === "done")
@@ -269,7 +421,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           alt: file.name,
           sortOrder: index,
         }));
-      
+
       form.setFieldValue("images", images);
     }
   };
@@ -286,9 +438,11 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     }
   };
 
-  const handleFileListChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
+  const handleFileListChange: UploadProps["onChange"] = ({
+    fileList: newFileList,
+  }) => {
     setFileList(newFileList);
-    
+
     // Update form values
     const images = newFileList
       .filter((file) => file.status === "done")
@@ -297,7 +451,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         alt: file.name,
         sortOrder: index,
       }));
-    
+
     form.setFieldValue("images", images);
   };
 
@@ -314,12 +468,13 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     }
   };
 
-
   const isEditMode = mode === "edit";
   const cancelTarget = isEditMode ? `/products/${productId}` : "/products";
 
   const watchOptions = Form.useWatch("options", form);
   const hasVariants = Form.useWatch("hasVariants", form);
+  const watchSellingPrice = Form.useWatch("sellingPrice", form);
+  const watchFinalPrice = Form.useWatch("finalPrice", form);
 
   const { data: categoriesData } = useQuery({
     queryKey: ["productCategories", "list", { isActive: true, limit: 100 }],
@@ -342,7 +497,8 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     enabled: isEditMode,
   });
 
-  const hasSavedOptions = isEditMode && product?.options && product.options.length > 0;
+  const hasSavedOptions =
+    isEditMode && product?.options && product.options.length > 0;
 
   const { data: productsData } = useQuery({
     queryKey: ["products", "count"],
@@ -372,6 +528,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
   const buildOriginalValues = useCallback((): Partial<FormValues> => {
     if (!product) return {};
+    const firstVariant = product.variants?.[0];
 
     return {
       name: product.name,
@@ -381,6 +538,10 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       productCategoryId: product.productCategoryId,
       unitId: product.unitId,
       sellingPrice: product.sellingPrice,
+      finalPrice: firstVariant?.finalPrice ?? product.sellingPrice,
+      discountType: firstVariant?.discountType ?? undefined,
+      discountValue: firstVariant?.discountValue ?? undefined,
+      discountMode: firstVariant?.discountMode ?? undefined,
       purchasePrice: product.purchasePrice ?? undefined,
       weightGram: product.weightGram ?? undefined,
       isActive: product.isActive,
@@ -394,9 +555,12 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         sku: v.sku,
         name: v.name,
         price: v.price,
+        finalPrice: v.finalPrice,
         compareAtPrice: v.compareAtPrice ?? undefined,
+        discountType: v.discountType ?? undefined,
+        discountValue: v.discountValue ?? undefined,
+        discountMode: v.discountMode ?? undefined,
         isActive: v.isActive,
-        isDefault: v.isDefault,
         optionValues: v.optionValues,
         optionValueIds: v.optionValues
           .map((ov) => {
@@ -465,7 +629,8 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
           dbVariants.forEach((v) => {
             const sizeVal = v.optionValues.find(
-              (ov) => ov.optionName === "Size" || ov.optionName === "Size (Run)",
+              (ov) =>
+                ov.optionName === "Size" || ov.optionName === "Size (Run)",
             )?.value;
             const colorVal = v.optionValues.find(
               (ov) => ov.optionName === "Warna",
@@ -481,8 +646,12 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
             }
           });
 
-          const sizePricesUnique = Object.values(sizeGroups).every((s) => s.size === 1);
-          const colorPricesUnique = Object.values(colorGroups).every((s) => s.size === 1);
+          const sizePricesUnique = Object.values(sizeGroups).every(
+            (s) => s.size === 1,
+          );
+          const colorPricesUnique = Object.values(colorGroups).every(
+            (s) => s.size === 1,
+          );
 
           if (sizePricesUnique && !colorPricesUnique) {
             setPriceScheme("by_size");
@@ -589,7 +758,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     );
 
     const currentVariants = form.getFieldValue("variants") || [];
-    const basePrice = form.getFieldValue("sellingPrice") || 0;
+    const basePrice = watchSellingPrice || 0;
 
     const productIndex =
       isEditMode && product?.code
@@ -606,11 +775,12 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         .join("|");
 
       const existing = currentVariants.find((v: FormVariant) => {
-        if (!v.optionValues || v.optionValues.length !== combo.length) return false;
+        if (!v.optionValues || v.optionValues.length !== combo.length)
+          return false;
         return combo.every((c) =>
           v.optionValues.some(
-            (ov) => ov.optionName === c.optionName && ov.value === c.value
-          )
+            (ov) => ov.optionName === c.optionName && ov.value === c.value,
+          ),
         );
       });
 
@@ -631,17 +801,25 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       }
 
       if (existing) {
+        const nextPrice =
+          priceScheme === "by_both" ? existing.price : variantPrice;
+
+        const nextDefaultFinalPrice =
+          watchFinalPrice !== undefined && watchFinalPrice !== null
+            ? Math.min(watchFinalPrice, nextPrice)
+            : nextPrice;
+
         return {
           ...existing,
           name: variantName,
-          price:
-            priceScheme === "by_size" || priceScheme === "by_color"
-              ? variantPrice
-              : existing.price,
-          imageUrl:
-            combo.find((c) => c.optionName === "Warna")?.value ?
-            variantImages[combo.find((c) => c.optionName === "Warna")!.value] :
-            existing.imageUrl,
+          price: nextPrice,
+          finalPrice:
+            existing.discountMode || existing.finalPrice !== existing.price
+              ? Math.min(existing.finalPrice ?? nextPrice, nextPrice)
+              : nextDefaultFinalPrice,
+          imageUrl: combo.find((c) => c.optionName === "Warna")?.value
+            ? variantImages[combo.find((c) => c.optionName === "Warna")!.value]
+            : existing.imageUrl,
         };
       }
 
@@ -663,10 +841,16 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         }
       });
 
+      const nextDefaultFinalPrice =
+        watchFinalPrice !== undefined && watchFinalPrice !== null
+          ? Math.min(watchFinalPrice, variantPrice)
+          : variantPrice;
+
       return {
         name: variantName,
         sku: `ILU-${productPart}-${variantPart}`,
         price: variantPrice,
+        finalPrice: nextDefaultFinalPrice,
         optionValues: combo.map((c) => ({
           optionName: c.optionName,
           value: c.value,
@@ -674,11 +858,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         optionValueIds,
         tempOptionValueIds,
         isActive: true,
-        isDefault: index === 0 && currentVariants.length === 0,
-        imageUrl:
-          combo.find((c) => c.optionName === "Warna")?.value ?
-          variantImages[combo.find((c) => c.optionName === "Warna")!.value] :
-          undefined,
+        imageUrl: combo.find((c) => c.optionName === "Warna")?.value
+          ? variantImages[combo.find((c) => c.optionName === "Warna")!.value]
+          : undefined,
       };
     });
 
@@ -695,6 +877,8 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     sizePrices,
     colorPrices,
     variantImages,
+    watchSellingPrice,
+    watchFinalPrice,
   ]);
 
   const createMutation = useMutation({
@@ -736,7 +920,10 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     onError: handleError,
   });
 
-  const handleCreateColor = (name: string, onSuccess?: (color: any) => void) => {
+  const handleCreateColor = (
+    name: string,
+    onSuccess?: (color: any) => void,
+  ) => {
     let hex = "#1677ff";
 
     modal.confirm({
@@ -786,26 +973,35 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     createColorMutation.isPending;
 
   function handleFinish(values: FormValues) {
-    const { hasVariants, ...rest } = values;
+    const {
+      hasVariants,
+      finalPrice,
+      discountType,
+      discountValue,
+      discountMode,
+      ...rest
+    } = values;
     const hasVariantOptions = Boolean(hasVariants && values.options?.length);
     const productIndex =
       isEditMode && product?.code
         ? parseInt(product.code.split("-")[1] ?? "0")
         : (productsData?.meta?.total ?? 0) + 1;
     const productPart = String(productIndex).padStart(4, "0");
-    const currentDefaultVariant =
-      values.variants?.find((variant) => variant.isDefault) ??
-      values.variants?.[0];
+    const currentDefaultVariant = values.variants?.[0];
 
     const defaultVariant = {
       sku:
-        currentDefaultVariant?.sku && !currentDefaultVariant.optionValues?.length
+        currentDefaultVariant?.sku &&
+        !currentDefaultVariant.optionValues?.length
           ? currentDefaultVariant.sku
           : buildDefaultVariantSku(productPart),
       name: DEFAULT_VARIANT_NAME,
       price: values.sellingPrice,
+      finalPrice: finalPrice ?? values.sellingPrice,
       compareAtPrice: currentDefaultVariant?.compareAtPrice,
-      isDefault: true,
+      discountType,
+      discountValue,
+      discountMode,
       isActive: currentDefaultVariant?.isActive ?? true,
       imageUrl: currentDefaultVariant?.imageUrl,
       tempOptionValueIds: [],
@@ -849,14 +1045,19 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                 sku: v.sku,
                 name: v.name || currentVariant?.name || "",
                 price: v.price,
+                finalPrice: v.finalPrice ?? v.price,
                 compareAtPrice: v.compareAtPrice,
-                isDefault: v.isDefault,
+                discountType: v.discountType,
+                discountValue: v.discountValue,
+                discountMode: v.discountMode,
                 isActive: v.isActive,
                 imageUrl: v.imageUrl || currentVariant?.imageUrl,
                 optionValueIds:
                   v.optionValueIds || currentVariant?.optionValueIds || [],
                 tempOptionValueIds:
-                  v.tempOptionValueIds || currentVariant?.tempOptionValueIds || [],
+                  v.tempOptionValueIds ||
+                  currentVariant?.tempOptionValueIds ||
+                  [],
               };
             })
           : [defaultVariant],
@@ -996,19 +1197,26 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     const savedIds = getSavedValueIds(index);
     const savedNames = getSavedValueNames(index);
 
-    let list: { label: string; value: string; color?: string | null; disabled?: boolean }[] = [];
+    let list: {
+      label: string;
+      value: string;
+      color?: string | null;
+      disabled?: boolean;
+    }[] = [];
 
     if (optionName === "Warna") {
       list = colorOptions.map((opt) => ({
         ...opt,
-        disabled: savedIds.has(opt.value) || savedNames.has(opt.label.toLowerCase()),
+        disabled:
+          savedIds.has(opt.value) || savedNames.has(opt.label.toLowerCase()),
       }));
     } else {
       const presets = VALUE_PRESETS[optionName] || [];
       list = presets.map((p) => ({ label: p, value: p }));
 
       // Ensure currently selected values are included so they can be marked disabled if saved
-      const currentValues = form.getFieldValue(["options", index, "values"]) || [];
+      const currentValues =
+        form.getFieldValue(["options", index, "values"]) || [];
       if (Array.isArray(currentValues)) {
         currentValues.forEach((cv: any) => {
           if (cv && cv.value && !list.some((item) => item.value === cv.value)) {
@@ -1022,7 +1230,8 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
       list = list.map((item) => ({
         ...item,
-        disabled: savedIds.has(item.value) || savedNames.has(item.label.toLowerCase()),
+        disabled:
+          savedIds.has(item.value) || savedNames.has(item.label.toLowerCase()),
       }));
     }
 
@@ -1189,7 +1398,10 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
             >
               <Form.Item name="images" className="!mb-0">
                 <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-                  <SortableContext items={fileList.map((i) => i.uid)} strategy={horizontalListSortingStrategy}>
+                  <SortableContext
+                    items={fileList.map((i) => i.uid)}
+                    strategy={horizontalListSortingStrategy}
+                  >
                     <Upload
                       listType="picture-card"
                       fileList={fileList}
@@ -1199,9 +1411,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                       multiple={true}
                       maxCount={3}
                       itemRender={(originNode, file) => (
-                        <DraggableUploadListItem 
-                          originNode={originNode} 
-                          file={file} 
+                        <DraggableUploadListItem
+                          originNode={originNode}
+                          file={file}
                           isFirst={fileList[0]?.uid === file.uid}
                         />
                       )}
@@ -1209,7 +1421,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                       {fileList.length >= 3 ? null : (
                         <div className="flex flex-col items-center justify-center">
                           <PlusOutlined className="text-lg text-gray-400" />
-                          <div className="mt-2 text-sm text-gray-500">Unggah</div>
+                          <div className="mt-2 text-sm text-gray-500">
+                            Unggah
+                          </div>
                         </div>
                       )}
                     </Upload>
@@ -1218,7 +1432,10 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
               </Form.Item>
 
               <div className="mt-4 rounded-xl bg-blue-50/50 p-4 border border-blue-100/50">
-                <Typography.Text strong className="block mb-2 text-xs uppercase tracking-wider text-blue-600">
+                <Typography.Text
+                  strong
+                  className="block mb-2 text-xs uppercase tracking-wider text-blue-600"
+                >
                   Persyaratan Foto
                 </Typography.Text>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
@@ -1257,7 +1474,11 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                 centered
                 styles={{ body: { padding: 0 } }}
               >
-                <img alt="preview" className="w-full h-auto" src={previewImage} />
+                <img
+                  alt="preview"
+                  className="w-full h-auto"
+                  src={previewImage}
+                />
               </Modal>
             </Card>
 
@@ -1267,7 +1488,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                 <Typography.Text type="secondary">Pricing</Typography.Text>
               }
             >
-              <div className="grid grid-cols-1 gap-x-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-x-4 md:grid-cols-4">
                 <Form.Item
                   name="sellingPrice"
                   label={PRODUCT_LABELS.sellingPrice}
@@ -1281,6 +1502,79 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                     min={0}
                     precision={0}
                     controls={false}
+                    onChange={(value) => {
+                      const nextPrice = value ?? 0;
+                      const currentFinalPrice =
+                        form.getFieldValue("finalPrice");
+                      const currentDiscountMode =
+                        form.getFieldValue("discountMode");
+                      if (
+                        !currentDiscountMode ||
+                        currentFinalPrice === undefined
+                      ) {
+                        form.setFieldValue("finalPrice", nextPrice);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (
+                        !/[0-9]/.test(e.key) &&
+                        ![
+                          "Backspace",
+                          "Tab",
+                          "Enter",
+                          "Escape",
+                          "ArrowLeft",
+                          "ArrowRight",
+                          "Delete",
+                        ].includes(e.key)
+                      ) {
+                        e.preventDefault();
+                      }
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="finalPrice"
+                  label={PRODUCT_LABELS.finalPrice}
+                  dependencies={["sellingPrice"]}
+                  rules={[
+                    {
+                      validator: (_, value) => {
+                        const sellingPrice =
+                          form.getFieldValue("sellingPrice") ?? 0;
+                        if (value === undefined || value <= sellingPrice) {
+                          return Promise.resolve();
+                        }
+                        return Promise.reject(
+                          new Error(
+                            "Harga setelah diskon tidak boleh lebih besar dari harga jual",
+                          ),
+                        );
+                      },
+                    },
+                  ]}
+                >
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    size="large"
+                    prefix="Rp"
+                    {...RUPIAH_FORMATTER}
+                    min={0}
+                    precision={0}
+                    controls={false}
+                    onChange={(value) => {
+                      const sellingPrice =
+                        form.getFieldValue("sellingPrice") ?? 0;
+                      form.setFieldsValue({
+                        discountMode:
+                          typeof value === "number" && value < sellingPrice
+                            ? "MANUAL"
+                            : null,
+                        discountType: null,
+                        discountValue: null,
+                      });
+                    }}
                     onKeyDown={(e) => {
                       if (
                         !/[0-9]/.test(e.key) &&
@@ -1358,6 +1652,94 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                   />
                 </Form.Item>
               </div>
+
+              <Form.Item name="discountType" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item name="discountValue" hidden>
+                <InputNumber />
+              </Form.Item>
+              <Form.Item name="discountMode" hidden>
+                <Input />
+              </Form.Item>
+
+              {!hasVariants && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button
+                    onClick={() => {
+                      let discountType: DiscountType = "PERCENTAGE";
+                      let discountValue = 0;
+                      modal.confirm({
+                        title: "Terapkan Diskon Produk",
+                        content: (
+                          <Space
+                            direction="vertical"
+                            className="w-full pt-2"
+                            size="middle"
+                          >
+                            <Select
+                              defaultValue={discountType}
+                              options={[
+                                { label: "Persentase", value: "PERCENTAGE" },
+                                { label: "Nominal", value: "FIXED_AMOUNT" },
+                              ]}
+                              onChange={(value) => {
+                                discountType = value;
+                              }}
+                              style={{ width: "100%" }}
+                            />
+                            <InputNumber
+                              autoFocus
+                              style={{ width: "100%" }}
+                              placeholder="Masukkan nilai diskon"
+                              {...RUPIAH_FORMATTER}
+                              min={0}
+                              precision={0}
+                              controls={false}
+                              onChange={(value) => {
+                                discountValue = value ?? 0;
+                              }}
+                            />
+                          </Space>
+                        ),
+                        onOk: () => {
+                          const sellingPrice =
+                            form.getFieldValue("sellingPrice") ?? 0;
+                          const nextFinalPrice = calculateDiscountedPrice(
+                            sellingPrice,
+                            discountType,
+                            discountValue,
+                          );
+                          form.setFieldsValue({
+                            finalPrice: nextFinalPrice,
+                            discountType,
+                            discountValue,
+                            discountMode: "AUTOMATIC",
+                          });
+                          message.success("Diskon produk berhasil diterapkan");
+                        },
+                      });
+                    }}
+                  >
+                    Terapkan Diskon Otomatis
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const sellingPrice =
+                        form.getFieldValue("sellingPrice") ?? 0;
+                      form.setFieldsValue({
+                        finalPrice: sellingPrice,
+                        discountType: null,
+                        discountValue: null,
+                        discountMode: null,
+                      });
+                      message.success("Diskon produk dihapus");
+                    }}
+                  >
+                    Hapus Diskon
+                  </Button>
+                </div>
+              )}
             </Card>
 
             <Card className="overflow-hidden" styles={{ body: { padding: 0 } }}>
@@ -1448,9 +1830,18 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
               >
                 {hasSavedOptions && (
                   <div className="mb-6 rounded-xl bg-blue-50/50 p-4 border border-blue-100/50 flex items-start gap-3">
-                    <Typography.Text className="text-blue-600 text-base">ℹ️</Typography.Text>
-                    <Typography.Text type="secondary" className="text-xs leading-relaxed">
-                      Struktur varian (nama opsi dan nilai opsi yang sudah disimpan) telah dikunci untuk menjaga integritas pesanan dan inventaris. Anda tetap dapat menambahkan nilai baru (seperti ukuran atau warna baru), mengubah harga, SKU, foto, dan status aktif untuk setiap varian.
+                    <Typography.Text className="text-blue-600 text-base">
+                      ℹ️
+                    </Typography.Text>
+                    <Typography.Text
+                      type="secondary"
+                      className="text-xs leading-relaxed"
+                    >
+                      Struktur varian (nama opsi dan nilai opsi yang sudah
+                      disimpan) telah dikunci untuk menjaga integritas pesanan
+                      dan inventaris. Anda tetap dapat menambahkan nilai baru
+                      (seperti ukuran atau warna baru), mengubah harga, SKU,
+                      foto, dan status aktif untuk setiap varian.
                     </Typography.Text>
                   </div>
                 )}
@@ -1464,7 +1855,10 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                   {(fields, { add, remove }) => (
                     <div className="space-y-4">
                       {fields.map(({ key, name, ...restField }) => {
-                        const isExistingOption = isEditMode && product?.options && name < product.options.length;
+                        const isExistingOption =
+                          isEditMode &&
+                          product?.options &&
+                          name < product.options.length;
                         return (
                           <div
                             key={key}
@@ -1524,22 +1918,71 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                                 {...restField}
                                 name={[name, "values"]}
                                 label="Nilai Opsi"
-                                rules={[{ required: true }]}
                                 className="!mb-0"
                                 {...(watchOptions?.[name]?.name === "Size (Run)"
                                   ? {
-                                      getValueProps: (val) => ({
-                                        value: Array.isArray(val)
-                                          ? val
-                                              .map((v: any) => v.label)
-                                              .join(", ")
-                                          : val,
-                                      }),
+                                      rules: [
+                                        {
+                                          required: true,
+                                          message: "Nilai opsi harus diisi",
+                                        },
+                                        {
+                                          validator: (_, value) => {
+                                            if (!isEditMode || !product) {
+                                              return Promise.resolve();
+                                            }
+                                            const dbOption =
+                                              product.options?.find(
+                                                (o) => o.name === "Size (Run)",
+                                              );
+                                            if (!dbOption) {
+                                              return Promise.resolve();
+                                            }
+                                            const currentArr = Array.isArray(
+                                              value,
+                                            )
+                                              ? value
+                                              : [];
+                                            const currentLabels =
+                                              currentArr.map((v: any) =>
+                                                v.label.trim().toLowerCase(),
+                                              );
+                                            const missing = dbOption.values
+                                              .map((v) => v.value.trim())
+                                              .filter(
+                                                (origLabel) =>
+                                                  !currentLabels.includes(
+                                                    origLabel.toLowerCase(),
+                                                  ),
+                                              );
+                                            if (missing.length > 0) {
+                                              return Promise.reject(
+                                                new Error(
+                                                  `Nilai opsi Size (Run) yang sudah disimpan tidak dapat dihapus: ${missing.join(
+                                                    ", ",
+                                                  )}`,
+                                                ),
+                                              );
+                                            }
+                                            return Promise.resolve();
+                                          },
+                                        },
+                                      ],
                                     }
-                                  : {})}
+                                  : {
+                                      rules: [
+                                        {
+                                          required: true,
+                                          message: "Nilai opsi harus diisi",
+                                        },
+                                      ],
+                                    })}
                               >
                                 {watchOptions?.[name]?.name === "Size (Run)" ? (
-                                  <Input placeholder="Contoh: 41,42,43 atau 41-43" />
+                                  <SizeRunInput
+                                    isEditMode={isEditMode}
+                                    product={product}
+                                  />
                                 ) : (
                                   <Select
                                     mode={
@@ -1555,13 +1998,22 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                                       const valId = deselectedValue?.value;
                                       if (valId && savedIds.has(valId)) {
                                         message.warning(
-                                          "Nilai opsi yang sudah disimpan tidak dapat dihapus untuk menjaga integritas data."
+                                          "Nilai opsi yang sudah disimpan tidak dapat dihapus untuk menjaga integritas data.",
                                         );
-                                        const currentVals = form.getFieldValue(["options", name, "values"]) || [];
-                                        if (!currentVals.some((cv: any) => cv.value === valId)) {
+                                        const currentVals =
+                                          form.getFieldValue([
+                                            "options",
+                                            name,
+                                            "values",
+                                          ]) || [];
+                                        if (
+                                          !currentVals.some(
+                                            (cv: any) => cv.value === valId,
+                                          )
+                                        ) {
                                           form.setFieldValue(
                                             ["options", name, "values"],
-                                            [...currentVals, deselectedValue]
+                                            [...currentVals, deselectedValue],
                                           );
                                         }
                                       }
@@ -1592,7 +2044,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                                         [name]: val,
                                       }));
 
-                                      if (watchOptions?.[name]?.name === "Warna") {
+                                      if (
+                                        watchOptions?.[name]?.name === "Warna"
+                                      ) {
                                         setColorwaySearch(val);
                                       }
                                     }}
@@ -1601,7 +2055,8 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                                         v.value
                                           ?.toString()
                                           .startsWith("CREATE_") ||
-                                        (watchOptions?.[name]?.name === "Warna" &&
+                                        (watchOptions?.[name]?.name ===
+                                          "Warna" &&
                                           !colorsData?.data.some(
                                             (c) => c.id === v.value,
                                           ))
@@ -1830,7 +2285,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                 )}
               </Card>
             )}
-            
+
             {hasVariants && colors.length > 0 && (
               <Card
                 title="Foto per Warna"
@@ -1848,18 +2303,23 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                       className="flex flex-col items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
                     >
                       <div className="flex w-full items-center justify-between">
-                        <Typography.Text strong className="truncate text-gray-700">
+                        <Typography.Text
+                          strong
+                          className="truncate text-gray-700"
+                        >
                           {color.label}
                         </Typography.Text>
                         <Tag color="blue" className="mr-0">
                           Warna
                         </Tag>
                       </div>
-                      
+
                       <Upload
                         listType="picture-card"
                         showUploadList={false}
-                        customRequest={({ file }) => handleVariantImageUpload(color.label, file as File)}
+                        customRequest={({ file }) =>
+                          handleVariantImageUpload(color.label, file as File)
+                        }
                         className="variant-uploader"
                       >
                         {variantImages[color.label] ? (
@@ -1875,17 +2335,19 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                           </div>
                         )}
                       </Upload>
-                      
+
                       {variantImages[color.label] && (
-                        <Button 
-                          type="text" 
-                          danger 
-                          size="small" 
-                          onClick={() => setVariantImages(prev => {
-                            const next = { ...prev };
-                            delete next[color.label];
-                            return next;
-                          })}
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          onClick={() =>
+                            setVariantImages((prev) => {
+                              const next = { ...prev };
+                              delete next[color.label];
+                              return next;
+                            })
+                          }
                         >
                           Hapus Foto
                         </Button>
@@ -1913,20 +2375,25 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                           {selectedRowKeys.length} varian terpilih
                         </Typography.Text>
                         <div className="h-4 w-[1px] bg-blue-200" />
-                        
+
                         <Space size="small">
-                          <Button 
-                            size="small" 
-                            type="text" 
+                          <Button
+                            size="small"
+                            type="text"
                             className="text-blue-600 hover:text-blue-700"
                             onClick={() => {
-                              const basePrice = form.getFieldValue("sellingPrice") || 0;
+                              const basePrice =
+                                form.getFieldValue("sellingPrice") || 0;
                               modal.confirm({
                                 title: "Terapkan Harga ke Semua yang Terpilih",
                                 content: (
                                   <div className="pt-2">
-                                    <Typography.Text type="secondary" className="block mb-3">
-                                      Masukkan harga yang akan diterapkan ke {selectedRowKeys.length} varian terpilih.
+                                    <Typography.Text
+                                      type="secondary"
+                                      className="block mb-3"
+                                    >
+                                      Masukkan harga yang akan diterapkan ke{" "}
+                                      {selectedRowKeys.length} varian terpilih.
                                     </Typography.Text>
                                     <InputNumber
                                       autoFocus
@@ -1937,7 +2404,18 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                                       defaultValue={basePrice}
                                       id="bulk-price-input"
                                       onKeyDown={(e) => {
-                                        if (!/[0-9]/.test(e.key) && !["Backspace", "Tab", "Enter", "Escape", "ArrowLeft", "ArrowRight", "Delete"].includes(e.key)) {
+                                        if (
+                                          !/[0-9]/.test(e.key) &&
+                                          ![
+                                            "Backspace",
+                                            "Tab",
+                                            "Enter",
+                                            "Escape",
+                                            "ArrowLeft",
+                                            "ArrowRight",
+                                            "Delete",
+                                          ].includes(e.key)
+                                        ) {
                                           e.preventDefault();
                                         }
                                       }}
@@ -1945,36 +2423,198 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                                   </div>
                                 ),
                                 onOk: () => {
-                                  const input = document.getElementById("bulk-price-input") as HTMLInputElement;
-                                  const newPrice = Number(input.value.replace(/\./g, ""));
-                                  const variants = form.getFieldValue("variants");
-                                  const updatedVariants = variants.map((v: any, index: number) => {
-                                    if (selectedRowKeys.includes(index)) {
-                                      return { ...v, price: newPrice };
-                                    }
-                                    return v;
-                                  });
-                                  form.setFieldValue("variants", updatedVariants);
+                                  const input = document.getElementById(
+                                    "bulk-price-input",
+                                  ) as HTMLInputElement;
+                                  const newPrice = Number(
+                                    input.value.replace(/\./g, ""),
+                                  );
+                                  const variants =
+                                    form.getFieldValue("variants");
+                                  const updatedVariants = variants.map(
+                                    (v: any, index: number) => {
+                                      if (selectedRowKeys.includes(index)) {
+                                        const hasDiscount = Boolean(
+                                          v.discountMode,
+                                        );
+                                        return {
+                                          ...v,
+                                          price: newPrice,
+                                          finalPrice: hasDiscount
+                                            ? Math.min(
+                                                v.finalPrice ?? newPrice,
+                                                newPrice,
+                                              )
+                                            : newPrice,
+                                        };
+                                      }
+                                      return v;
+                                    },
+                                  );
+                                  form.setFieldValue(
+                                    "variants",
+                                    updatedVariants,
+                                  );
                                   message.success("Harga berhasil diterapkan");
-                                }
+                                },
                               });
                             }}
                           >
                             Terapkan Harga
                           </Button>
 
-                          <Button 
-                            size="small" 
-                            type="text" 
+                          <Button
+                            size="small"
+                            type="text"
+                            className="text-blue-600 hover:text-blue-700"
+                            onClick={() => {
+                              let discountType: DiscountType = "PERCENTAGE";
+                              let discountValue = 0;
+                              modal.confirm({
+                                title: "Terapkan Diskon Otomatis",
+                                content: (
+                                  <Space
+                                    direction="vertical"
+                                    className="w-full pt-2"
+                                    size="middle"
+                                  >
+                                    <Typography.Text type="secondary">
+                                      Diskon akan dihitung dari harga jual
+                                      masing-masing varian terpilih.
+                                    </Typography.Text>
+                                    <Select
+                                      defaultValue={discountType}
+                                      options={[
+                                        {
+                                          label: "Persentase",
+                                          value: "PERCENTAGE",
+                                        },
+                                        {
+                                          label: "Nominal",
+                                          value: "FIXED_AMOUNT",
+                                        },
+                                      ]}
+                                      onChange={(value) => {
+                                        discountType = value;
+                                      }}
+                                      style={{ width: "100%" }}
+                                    />
+                                    <InputNumber
+                                      autoFocus
+                                      style={{ width: "100%" }}
+                                      placeholder="Masukkan nilai diskon"
+                                      {...RUPIAH_FORMATTER}
+                                      min={0}
+                                      precision={0}
+                                      controls={false}
+                                      onChange={(value) => {
+                                        discountValue = value ?? 0;
+                                      }}
+                                    />
+                                  </Space>
+                                ),
+                                onOk: () => {
+                                  const variants =
+                                    form.getFieldValue("variants");
+                                  const updatedVariants = variants.map(
+                                    (v: FormVariant, index: number) => {
+                                      if (!selectedRowKeys.includes(index))
+                                        return v;
+                                      return {
+                                        ...v,
+                                        finalPrice: calculateDiscountedPrice(
+                                          v.price,
+                                          discountType,
+                                          discountValue,
+                                        ),
+                                        discountType,
+                                        discountValue,
+                                        discountMode: "AUTOMATIC" as const,
+                                      };
+                                    },
+                                  );
+                                  form.setFieldValue(
+                                    "variants",
+                                    updatedVariants,
+                                  );
+                                  message.success(
+                                    "Diskon otomatis berhasil diterapkan",
+                                  );
+                                },
+                              });
+                            }}
+                          >
+                            Diskon Otomatis
+                          </Button>
+
+                          <Button
+                            size="small"
+                            type="text"
                             className="text-blue-600 hover:text-blue-700"
                             onClick={() => {
                               const variants = form.getFieldValue("variants");
-                              const updatedVariants = variants.map((v: any, index: number) => {
-                                if (selectedRowKeys.includes(index)) {
-                                  return { ...v, isActive: true };
-                                }
-                                return v;
-                              });
+                              const updatedVariants = variants.map(
+                                (v: FormVariant, index: number) => {
+                                  if (!selectedRowKeys.includes(index))
+                                    return v;
+                                  return {
+                                    ...v,
+                                    finalPrice: v.finalPrice ?? v.price,
+                                    discountType: null,
+                                    discountValue: null,
+                                    discountMode: "MANUAL" as const,
+                                  };
+                                },
+                              );
+                              form.setFieldValue("variants", updatedVariants);
+                              message.success(
+                                "Silakan isi harga setelah diskon secara manual",
+                              );
+                            }}
+                          >
+                            Input Manual
+                          </Button>
+
+                          <Button
+                            size="small"
+                            type="text"
+                            className="text-blue-600 hover:text-blue-700"
+                            onClick={() => {
+                              const variants = form.getFieldValue("variants");
+                              const updatedVariants = variants.map(
+                                (v: FormVariant, index: number) => {
+                                  if (!selectedRowKeys.includes(index))
+                                    return v;
+                                  return {
+                                    ...v,
+                                    finalPrice: v.price,
+                                    discountType: null,
+                                    discountValue: null,
+                                    discountMode: null,
+                                  };
+                                },
+                              );
+                              form.setFieldValue("variants", updatedVariants);
+                              message.success("Diskon berhasil dihapus");
+                            }}
+                          >
+                            Hapus Diskon
+                          </Button>
+
+                          <Button
+                            size="small"
+                            type="text"
+                            className="text-blue-600 hover:text-blue-700"
+                            onClick={() => {
+                              const variants = form.getFieldValue("variants");
+                              const updatedVariants = variants.map(
+                                (v: any, index: number) => {
+                                  if (selectedRowKeys.includes(index)) {
+                                    return { ...v, isActive: true };
+                                  }
+                                  return v;
+                                },
+                              );
                               form.setFieldValue("variants", updatedVariants);
                               message.success("Varian berhasil diaktifkan");
                             }}
@@ -1982,31 +2622,32 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                             Aktifkan
                           </Button>
 
-                          <Button 
-                            size="small" 
-                            type="text" 
+                          <Button
+                            size="small"
+                            type="text"
                             className="text-blue-600 hover:text-blue-700"
                             onClick={() => {
                               const variants = form.getFieldValue("variants");
-                              const updatedVariants = variants.map((v: any, index: number) => {
-                                if (selectedRowKeys.includes(index)) {
-                                  return { ...v, isActive: false };
-                                }
-                                return v;
-                              });
+                              const updatedVariants = variants.map(
+                                (v: any, index: number) => {
+                                  if (selectedRowKeys.includes(index)) {
+                                    return { ...v, isActive: false };
+                                  }
+                                  return v;
+                                },
+                              );
                               form.setFieldValue("variants", updatedVariants);
                               message.success("Varian berhasil dinonaktifkan");
                             }}
                           >
                             Non-aktifkan
                           </Button>
-
                         </Space>
                       </Space>
-                      
-                      <Button 
-                        size="small" 
-                        type="text" 
+
+                      <Button
+                        size="small"
+                        type="text"
                         onClick={() => setSelectedRowKeys([])}
                       >
                         Batal
@@ -2028,13 +2669,18 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                           dataIndex: "imageUrl",
                           key: "imageUrl",
                           width: 70,
-                          render: (url: string) => url ? (
-                            <img src={url} alt="" className="h-10 w-10 rounded-lg object-cover border border-gray-200" />
-                          ) : (
-                            <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
-                              -
-                            </div>
-                          )
+                          render: (url: string) =>
+                            url ? (
+                              <img
+                                src={url}
+                                alt=""
+                                className="h-10 w-10 rounded-lg object-cover border border-gray-200"
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
+                                -
+                              </div>
+                            ),
                         },
                         {
                           title: "Varian",
@@ -2042,17 +2688,23 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                           key: "name",
                           render: (name: string, record: any) => (
                             <div className="flex flex-col">
-                              <Form.Item name={[record.field.name, "name"]} noStyle>
+                              <Form.Item
+                                name={[record.field.name, "name"]}
+                                noStyle
+                              >
                                 <Input type="hidden" />
                               </Form.Item>
-                              <Form.Item name={[record.field.name, "imageUrl"]} noStyle>
+                              <Form.Item
+                                name={[record.field.name, "imageUrl"]}
+                                noStyle
+                              >
                                 <Input type="hidden" />
                               </Form.Item>
                               <Typography.Text strong className="text-gray-800">
                                 {name}
                               </Typography.Text>
                             </div>
-                          )
+                          ),
                         },
                         {
                           title: "SKU",
@@ -2067,13 +2719,13 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                             >
                               <Input size="middle" disabled />
                             </Form.Item>
-                          )
+                          ),
                         },
                         {
                           title: "Harga",
                           dataIndex: "price",
                           key: "price",
-                          width: 200,
+                          width: 170,
                           render: (_: any, record: any) => (
                             <Form.Item
                               name={[record.field.name, "price"]}
@@ -2094,32 +2746,143 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                                   priceScheme === "by_color"
                                 }
                                 onKeyDown={(e) => {
-                                  if (!/[0-9]/.test(e.key) && !["Backspace", "Tab", "Enter", "Escape", "ArrowLeft", "ArrowRight", "Delete"].includes(e.key)) {
+                                  if (
+                                    !/[0-9]/.test(e.key) &&
+                                    ![
+                                      "Backspace",
+                                      "Tab",
+                                      "Enter",
+                                      "Escape",
+                                      "ArrowLeft",
+                                      "ArrowRight",
+                                      "Delete",
+                                    ].includes(e.key)
+                                  ) {
                                     e.preventDefault();
                                   }
                                 }}
                               />
                             </Form.Item>
-                          )
+                          ),
                         },
                         {
-                          title: "Default",
-                          dataIndex: "isDefault",
-                          key: "isDefault",
-                          width: 90,
-                          align: "center" as const,
+                          title: "Harga Setelah Diskon",
+                          dataIndex: "finalPrice",
+                          key: "finalPrice",
+                          width: 190,
                           render: (_: any, record: any) => (
-                            <Radio
-                              checked={form.getFieldValue(["variants", record.field.name, "isDefault"])}
-                              onChange={() => {
-                                const variants = form.getFieldValue("variants");
-                                variants.forEach((v: any, i: number) => {
-                                  v.isDefault = i === record.field.name;
-                                });
-                                form.setFieldValue("variants", [...variants]);
-                              }}
-                            />
-                          )
+                            <>
+                              <Form.Item
+                                name={[record.field.name, "discountType"]}
+                                hidden
+                              >
+                                <Input type="hidden" />
+                              </Form.Item>
+                              <Form.Item
+                                name={[record.field.name, "discountValue"]}
+                                hidden
+                              >
+                                <InputNumber />
+                              </Form.Item>
+                              <Form.Item
+                                name={[record.field.name, "discountMode"]}
+                                hidden
+                              >
+                                <Input type="hidden" />
+                              </Form.Item>
+                              <Form.Item
+                                name={[record.field.name, "finalPrice"]}
+                                noStyle
+                                rules={[
+                                  { required: true },
+                                  {
+                                    validator: (_, value) => {
+                                      const price =
+                                        form.getFieldValue([
+                                          "variants",
+                                          record.field.name,
+                                          "price",
+                                        ]) ?? 0;
+                                      if (
+                                        value === undefined ||
+                                        value <= price
+                                      ) {
+                                        return Promise.resolve();
+                                      }
+                                      return Promise.reject(
+                                        new Error(
+                                          "Harga setelah diskon tidak boleh lebih besar dari harga",
+                                        ),
+                                      );
+                                    },
+                                  },
+                                ]}
+                              >
+                                <InputNumber
+                                  style={{ width: "100%" }}
+                                  prefix="Rp"
+                                  size="middle"
+                                  {...RUPIAH_FORMATTER}
+                                  min={0}
+                                  precision={0}
+                                  controls={false}
+                                  onChange={(value) => {
+                                    const price =
+                                      form.getFieldValue([
+                                        "variants",
+                                        record.field.name,
+                                        "price",
+                                      ]) ?? 0;
+                                    if (
+                                      typeof value === "number" &&
+                                      value < price
+                                    ) {
+                                      form.setFieldValue(
+                                        [
+                                          "variants",
+                                          record.field.name,
+                                          "discountMode",
+                                        ],
+                                        "MANUAL",
+                                      );
+                                      form.setFieldValue(
+                                        [
+                                          "variants",
+                                          record.field.name,
+                                          "discountType",
+                                        ],
+                                        null,
+                                      );
+                                      form.setFieldValue(
+                                        [
+                                          "variants",
+                                          record.field.name,
+                                          "discountValue",
+                                        ],
+                                        null,
+                                      );
+                                    }
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (
+                                      !/[0-9]/.test(e.key) &&
+                                      ![
+                                        "Backspace",
+                                        "Tab",
+                                        "Enter",
+                                        "Escape",
+                                        "ArrowLeft",
+                                        "ArrowRight",
+                                        "Delete",
+                                      ].includes(e.key)
+                                    ) {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                />
+                              </Form.Item>
+                            </>
+                          ),
                         },
                         {
                           title: "Status",
@@ -2135,8 +2898,8 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                             >
                               <Switch size="small" />
                             </Form.Item>
-                          )
-                        }
+                          ),
+                        },
                       ];
 
                       return (
@@ -2157,11 +2920,15 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                                 <Typography.Text className="block font-medium text-gray-500">
                                   Belum Ada Varian
                                 </Typography.Text>
-                                <Typography.Text type="secondary" className="max-w-[240px] text-xs">
-                                  Tambahkan opsi di atas untuk menghasilkan kombinasi varian secara otomatis.
+                                <Typography.Text
+                                  type="secondary"
+                                  className="max-w-[240px] text-xs"
+                                >
+                                  Tambahkan opsi di atas untuk menghasilkan
+                                  kombinasi varian secara otomatis.
                                 </Typography.Text>
                               </div>
-                            )
+                            ),
                           }}
                           className="variant-table"
                           rowClassName="group"
@@ -2200,166 +2967,170 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           </div>
         </div>
 
-      <Modal
-        title={
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-blue-500" />
-            <span>Pilih Skema Harga</span>
-          </div>
-        }
-        open={isPriceSchemeModalVisible}
-        onCancel={() => {
-          setIsPriceSchemeModalVisible(false);
-          // If they cancel, we probably shouldn't have enabled variants
-          // unless they already had them. But the user asked for a modal after select yes.
-          // For now just close.
-        }}
-        footer={null}
-        centered
-        width={400}
-        styles={{
-          body: { paddingTop: "12px" },
-        }}
-      >
-        <div className="flex flex-col gap-4">
-          <Typography.Text type="secondary" className="mb-1 block px-1">
-            Bagaimana Anda ingin mengatur harga untuk setiap varian yang akan
-            dibuat?
-          </Typography.Text>
+        <Modal
+          title={
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-blue-500" />
+              <span>Pilih Skema Harga</span>
+            </div>
+          }
+          open={isPriceSchemeModalVisible}
+          onCancel={() => {
+            setIsPriceSchemeModalVisible(false);
+            // If they cancel, we probably shouldn't have enabled variants
+            // unless they already had them. But the user asked for a modal after select yes.
+            // For now just close.
+          }}
+          footer={null}
+          centered
+          width={400}
+          styles={{
+            body: { paddingTop: "12px" },
+          }}
+        >
+          <div className="flex flex-col gap-4">
+            <Typography.Text type="secondary" className="mb-1 block px-1">
+              Bagaimana Anda ingin mengatur harga untuk setiap varian yang akan
+              dibuat?
+            </Typography.Text>
 
-          {[
-            {
-              label: "Semua Sama",
-              value: "all_same",
-              description: "Semua varian menggunakan harga yang sama.",
-              icon: "💰",
-            },
-            {
-              label: "Berdasarkan Ukuran",
-              value: "by_size",
-              description: "Harga berbeda untuk setiap ukuran.",
-              icon: "📏",
-            },
-            {
-              label: "Berdasarkan Warna",
-              value: "by_color",
-              description: "Harga berbeda untuk setiap warna.",
-              icon: "🎨",
-            },
-            {
-              label: "Berdasarkan Keduanya",
-              value: "by_both",
-              description: "Harga unik untuk setiap kombinasi warna & ukuran.",
-              icon: "✨",
-            },
-          ].map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              className="group flex w-full items-center gap-4 rounded-2xl border-2 border-gray-100 bg-white p-5 text-left transition-all hover:border-blue-500 hover:bg-blue-50/30 hover:shadow-md active:scale-[0.98]"
-              onClick={() => {
-                setPriceScheme(item.value);
-                setIsPriceSchemeModalVisible(false);
+            {[
+              {
+                label: "Semua Sama",
+                value: "all_same",
+                description: "Semua varian menggunakan harga yang sama.",
+                icon: "💰",
+              },
+              {
+                label: "Berdasarkan Ukuran",
+                value: "by_size",
+                description: "Harga berbeda untuk setiap ukuran.",
+                icon: "📏",
+              },
+              {
+                label: "Berdasarkan Warna",
+                value: "by_color",
+                description: "Harga berbeda untuk setiap warna.",
+                icon: "🎨",
+              },
+              {
+                label: "Berdasarkan Keduanya",
+                value: "by_both",
+                description:
+                  "Harga unik untuk setiap kombinasi warna & ukuran.",
+                icon: "✨",
+              },
+            ].map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className="group flex w-full items-center gap-4 rounded-2xl border-2 border-gray-100 bg-white p-5 text-left transition-all hover:border-blue-500 hover:bg-blue-50/30 hover:shadow-md active:scale-[0.98]"
+                onClick={() => {
+                  setPriceScheme(item.value);
+                  setIsPriceSchemeModalVisible(false);
 
-                if (
-                  item.value === "all_same" &&
-                  !form.getFieldValue("sellingPrice")
-                ) {
-                  setIsPriceInputModalVisible(true);
-                }
-              }}
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-50 text-2xl transition-colors group-hover:bg-blue-100">
-                {item.icon}
-              </div>
-              <div className="flex flex-col">
-                <Typography.Text strong className="text-base">
-                  {item.label}
-                </Typography.Text>
-                <Typography.Text type="secondary" className="text-xs leading-relaxed">
-                  {item.description}
-                </Typography.Text>
-              </div>
-            </button>
-          ))}
-        </div>
-      </Modal>
-
-      <Modal
-        title={
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-blue-500" />
-            <span>Masukkan Harga Jual</span>
-          </div>
-        }
-        open={isPriceInputModalVisible}
-        onCancel={() => setIsPriceInputModalVisible(false)}
-        footer={null}
-        centered
-        width={500}
-        styles={{
-          body: { paddingTop: "12px" },
-        }}
-      >
-        <div className="flex flex-col gap-4">
-          <Typography.Text type="secondary" className="mb-1 block px-1">
-            Anda memilih skema harga <strong>Semua Sama</strong>. Silakan
-            masukkan harga jual dasar untuk produk ini.
-          </Typography.Text>
-
-          <Form
-            layout="vertical"
-            onFinish={(values) => {
-              form.setFieldValue("sellingPrice", values.sellingPrice);
-              setIsPriceInputModalVisible(false);
-            }}
-          >
-            <Form.Item
-              name="sellingPrice"
-              label={PRODUCT_LABELS.sellingPrice}
-              rules={[{ required: true, message: "Harga jual wajib diisi" }]}
-            >
-              <InputNumber
-                autoFocus
-                style={{ width: "100%" }}
-                size="large"
-                prefix="Rp"
-                {...RUPIAH_FORMATTER}
-                min={0}
-                precision={0}
-                controls={false}
-                keyboard={true}
-                onKeyDown={(e) => {
                   if (
-                    !/[0-9]/.test(e.key) &&
-                    ![
-                      "Backspace",
-                      "Tab",
-                      "Enter",
-                      "Escape",
-                      "ArrowLeft",
-                      "ArrowRight",
-                      "Delete",
-                    ].includes(e.key)
+                    item.value === "all_same" &&
+                    !form.getFieldValue("sellingPrice")
                   ) {
-                    e.preventDefault();
+                    setIsPriceInputModalVisible(true);
                   }
                 }}
-              />
-            </Form.Item>
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-50 text-2xl transition-colors group-hover:bg-blue-100">
+                  {item.icon}
+                </div>
+                <div className="flex flex-col">
+                  <Typography.Text strong className="text-base">
+                    {item.label}
+                  </Typography.Text>
+                  <Typography.Text
+                    type="secondary"
+                    className="text-xs leading-relaxed"
+                  >
+                    {item.description}
+                  </Typography.Text>
+                </div>
+              </button>
+            ))}
+          </div>
+        </Modal>
 
-            <Button
-              type="primary"
-              size="large"
-              block
-              htmlType="submit"
-              className="mt-2"
+        <Modal
+          title={
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-blue-500" />
+              <span>Masukkan Harga Jual</span>
+            </div>
+          }
+          open={isPriceInputModalVisible}
+          onCancel={() => setIsPriceInputModalVisible(false)}
+          footer={null}
+          centered
+          width={500}
+          styles={{
+            body: { paddingTop: "12px" },
+          }}
+        >
+          <div className="flex flex-col gap-4">
+            <Typography.Text type="secondary" className="mb-1 block px-1">
+              Anda memilih skema harga <strong>Semua Sama</strong>. Silakan
+              masukkan harga jual dasar untuk produk ini.
+            </Typography.Text>
+
+            <Form
+              layout="vertical"
+              onFinish={(values) => {
+                form.setFieldValue("sellingPrice", values.sellingPrice);
+                setIsPriceInputModalVisible(false);
+              }}
             >
-              Simpan Harga
-            </Button>
-          </Form>
-        </div>
-      </Modal>
+              <Form.Item
+                name="sellingPrice"
+                label={PRODUCT_LABELS.sellingPrice}
+                rules={[{ required: true, message: "Harga jual wajib diisi" }]}
+              >
+                <InputNumber
+                  autoFocus
+                  style={{ width: "100%" }}
+                  size="large"
+                  prefix="Rp"
+                  {...RUPIAH_FORMATTER}
+                  min={0}
+                  precision={0}
+                  controls={false}
+                  keyboard={true}
+                  onKeyDown={(e) => {
+                    if (
+                      !/[0-9]/.test(e.key) &&
+                      ![
+                        "Backspace",
+                        "Tab",
+                        "Enter",
+                        "Escape",
+                        "ArrowLeft",
+                        "ArrowRight",
+                        "Delete",
+                      ].includes(e.key)
+                    ) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
+              </Form.Item>
+
+              <Button
+                type="primary"
+                size="large"
+                block
+                htmlType="submit"
+                className="mt-2"
+              >
+                Simpan Harga
+              </Button>
+            </Form>
+          </div>
+        </Modal>
       </div>
     </Form>
   );

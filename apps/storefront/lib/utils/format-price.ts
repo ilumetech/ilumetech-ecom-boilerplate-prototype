@@ -1,9 +1,9 @@
-const formatter = new Intl.NumberFormat('id-ID', {
-  style: 'currency',
-  currency: 'IDR',
+const formatter = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
   minimumFractionDigits: 0,
-})
+});
 
 export function formatPrice(amount: number): string {
-  return formatter.format(amount)
+  return formatter.format(amount);
 }

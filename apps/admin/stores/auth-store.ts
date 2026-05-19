@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import type { AppUserMe } from '@ilumetech/types';
+import { create } from "zustand";
+import type { AppUserMe } from "@ilumetech/types";
 
 interface AuthState {
   currentUser: AppUserMe | null;

@@ -49,7 +49,7 @@ export class ColorService {
 
   async create(dto: CreateColorDto): Promise<Color> {
     const color = await this.prisma.color.create({
-      data: { 
+      data: {
         name: dto.name,
         hexCode: dto.hexCode,
       },

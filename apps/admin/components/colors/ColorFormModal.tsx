@@ -36,9 +36,9 @@ export function ColorFormModal({
   useEffect(() => {
     if (!open) return;
     if (isEditMode && editTarget) {
-      form.setFieldsValue({ 
+      form.setFieldsValue({
         name: editTarget.name,
-        hexCode: editTarget.hexCode ?? undefined 
+        hexCode: editTarget.hexCode ?? undefined,
       });
       return;
     }
@@ -46,10 +46,11 @@ export function ColorFormModal({
   }, [open, isEditMode, editTarget, form]);
 
   const createMutation = useMutation({
-    mutationFn: (values: FormValues) => colorApi.create({ 
-      name: values.name,
-      hexCode: values.hexCode 
-    }),
+    mutationFn: (values: FormValues) =>
+      colorApi.create({
+        name: values.name,
+        hexCode: values.hexCode,
+      }),
     onSuccess: () => {
       message.success("Warna berhasil dibuat");
       onSuccess();
@@ -76,8 +77,8 @@ export function ColorFormModal({
     }
 
     const dirtyFields = getDirtyFields(
-      { name: values.name, hexCode: values.hexCode }, 
-      { name: editTarget!.name, hexCode: editTarget!.hexCode ?? undefined }
+      { name: values.name, hexCode: values.hexCode },
+      { name: editTarget!.name, hexCode: editTarget!.hexCode ?? undefined },
     );
     if (Object.keys(dirtyFields).length === 0) {
       message.info("Tidak ada perubahan");
@@ -123,7 +124,12 @@ export function ColorFormModal({
       mask={{ closable: false }}
       destroyOnHidden={true}
     >
-      <Form form={form} layout="vertical" onFinish={handleFinish} className="mt-4">
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleFinish}
+        className="mt-4"
+      >
         <Form.Item
           name="name"
           label={COLOR_LABELS.name}
@@ -135,7 +141,9 @@ export function ColorFormModal({
         <Form.Item
           name="hexCode"
           label={COLOR_LABELS.hexCode}
-          getValueFromEvent={(color) => (typeof color === 'string' ? color : color.toHexString())}
+          getValueFromEvent={(color) =>
+            typeof color === "string" ? color : color.toHexString()
+          }
         >
           <ColorPicker showText />
         </Form.Item>

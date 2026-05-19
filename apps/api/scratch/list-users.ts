@@ -11,8 +11,10 @@ async function main() {
   if (users.length === 0) {
     console.log('No users found.');
   } else {
-    users.forEach(u => {
-      console.log(`- Email: ${u.email}, ID: ${u.id}, Role: ${u.role?.name ?? 'NONE'}`);
+    users.forEach((u) => {
+      console.log(
+        `- Email: ${u.email}, ID: ${u.id}, Role: ${u.role?.name ?? 'NONE'}`,
+      );
     });
   }
 }

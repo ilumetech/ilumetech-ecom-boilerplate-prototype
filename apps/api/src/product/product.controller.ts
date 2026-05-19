@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { AuditCategory } from '@prisma/client';
 import { ClerkAuthGuard, PermissionsGuard } from '../common/guards';
 import { Audit, Permissions, SensitiveFields } from '../common/decorators';
@@ -25,7 +35,7 @@ export class ProductController {
     private readonly productService: ProductService,
     private readonly optionService: ProductOptionService,
     private readonly variantService: ProductVariantService,
-  ) { }
+  ) {}
 
   @Get()
   @Permissions(PERMISSIONS.PRODUCT.READ)
@@ -66,7 +76,10 @@ export class ProductController {
 
   @Post(':productId/options')
   @Permissions(PERMISSIONS.PRODUCT.UPDATE)
-  createOption(@Param('productId') productId: string, @Body() dto: CreateProductOptionDto) {
+  createOption(
+    @Param('productId') productId: string,
+    @Body() dto: CreateProductOptionDto,
+  ) {
     return this.optionService.create(productId, dto);
   }
 
@@ -82,7 +95,10 @@ export class ProductController {
 
   @Delete(':productId/options/:optionId')
   @Permissions(PERMISSIONS.PRODUCT.UPDATE)
-  removeOption(@Param('productId') productId: string, @Param('optionId') optionId: string) {
+  removeOption(
+    @Param('productId') productId: string,
+    @Param('optionId') optionId: string,
+  ) {
     return this.optionService.remove(productId, optionId);
   }
 
@@ -95,13 +111,19 @@ export class ProductController {
 
   @Post(':productId/variants')
   @Permissions(PERMISSIONS.PRODUCT.UPDATE)
-  createVariant(@Param('productId') productId: string, @Body() dto: CreateProductVariantDto) {
+  createVariant(
+    @Param('productId') productId: string,
+    @Body() dto: CreateProductVariantDto,
+  ) {
     return this.variantService.create(productId, dto);
   }
 
   @Get(':productId/variants/:variantId')
   @Permissions(PERMISSIONS.PRODUCT.READ)
-  findOneVariant(@Param('productId') productId: string, @Param('variantId') variantId: string) {
+  findOneVariant(
+    @Param('productId') productId: string,
+    @Param('variantId') variantId: string,
+  ) {
     return this.variantService.findOne(productId, variantId);
   }
 
@@ -117,7 +139,10 @@ export class ProductController {
 
   @Delete(':productId/variants/:variantId')
   @Permissions(PERMISSIONS.PRODUCT.UPDATE)
-  removeVariant(@Param('productId') productId: string, @Param('variantId') variantId: string) {
+  removeVariant(
+    @Param('productId') productId: string,
+    @Param('variantId') variantId: string,
+  ) {
     return this.variantService.remove(productId, variantId);
   }
 }

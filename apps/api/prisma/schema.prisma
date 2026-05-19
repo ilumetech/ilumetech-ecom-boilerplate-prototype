@@ -153,9 +153,12 @@ model ProductVariant {
   sku            String                      @unique
   name           String
   price          Decimal
+  finalPrice     Decimal
   compareAtPrice Decimal?
+  discountType   DiscountType?
+  discountValue  Decimal?
+  discountMode   DiscountMode?
   imageUrl       String?
-  isDefault      Boolean                     @default(false)
   isActive       Boolean                     @default(true)
   optionValues   ProductVariantOptionValue[]
   createdAt      DateTime                    @default(now())
@@ -176,6 +179,16 @@ enum AuditCategory {
   FINANCIAL
   OPERATIONAL
   SYSTEM
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum DiscountMode {
+  AUTOMATIC
+  MANUAL
 }
 
 model AuditLog {

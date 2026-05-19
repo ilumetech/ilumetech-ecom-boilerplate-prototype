@@ -14,7 +14,7 @@ async function main() {
   }
 
   console.log(`--- Permissions for Role: ${adminRole.name} ---`);
-  adminRole.permissions.forEach(rp => {
+  adminRole.permissions.forEach((rp) => {
     console.log(`- ${rp.permission.action}`);
   });
 }

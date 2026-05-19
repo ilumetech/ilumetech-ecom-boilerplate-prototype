@@ -1,11 +1,18 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { Card, Empty, Spin, theme } from 'antd';
-import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { dashboardApi } from '@/lib/api/dashboard';
-import type { UserStats } from '@/lib/api/dashboard';
-import { DASHBOARD_LABELS } from '@/lib/labels/dashboard';
+import { useQuery } from "@tanstack/react-query";
+import { Card, Empty, Spin, theme } from "antd";
+import {
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
+import { dashboardApi } from "@/lib/api/dashboard";
+import type { UserStats } from "@/lib/api/dashboard";
+import { DASHBOARD_LABELS } from "@/lib/labels/dashboard";
 
 function LoadingState() {
   return (
@@ -15,7 +22,13 @@ function LoadingState() {
   );
 }
 
-function UserPieChart({ stats, colors }: { stats: UserStats; colors: string[] }) {
+function UserPieChart({
+  stats,
+  colors,
+}: {
+  stats: UserStats;
+  colors: string[];
+}) {
   const chartData = [
     { name: DASHBOARD_LABELS.activeUsers, value: stats.active },
     { name: DASHBOARD_LABELS.inactiveUsers, value: stats.inactive },
@@ -29,7 +42,7 @@ function UserPieChart({ stats, colors }: { stats: UserStats; colors: string[] })
           dataKey="value"
           outerRadius={100}
           label={(props) =>
-            `${props.name ?? ''}: ${props.value ?? 0} (${((props.percent ?? 0) * 100).toFixed(0)}%)`
+            `${props.name ?? ""}: ${props.value ?? 0} (${((props.percent ?? 0) * 100).toFixed(0)}%)`
           }
         >
           {chartData.map((_, index) => (
@@ -46,7 +59,7 @@ function UserPieChart({ stats, colors }: { stats: UserStats; colors: string[] })
 export default function UserStatusChart() {
   const { token } = theme.useToken();
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['dashboard', 'user-stats'],
+    queryKey: ["dashboard", "user-stats"],
     queryFn: dashboardApi.getStats,
   });
 

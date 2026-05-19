@@ -1,12 +1,16 @@
-import { apiClient } from './client';
-import type { ProductCategory, PaginatedResponse, ApiResponse } from '@ilumetech/types';
+import { apiClient } from "./client";
+import type {
+  ProductCategory,
+  PaginatedResponse,
+  ApiResponse,
+} from "@ilumetech/types";
 
 export interface ProductCategoryQueryParams {
   page?: number;
   limit?: number;
   search?: string;
   sortField?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   isActive?: boolean;
 }
 
@@ -22,23 +26,41 @@ interface UpdateProductCategoryPayload {
   isActive?: boolean;
 }
 
-async function getAll(params?: ProductCategoryQueryParams): Promise<PaginatedResponse<ProductCategory>> {
-  const response = await apiClient.get<PaginatedResponse<ProductCategory>>('/product-categories', { params });
+async function getAll(
+  params?: ProductCategoryQueryParams,
+): Promise<PaginatedResponse<ProductCategory>> {
+  const response = await apiClient.get<PaginatedResponse<ProductCategory>>(
+    "/product-categories",
+    { params },
+  );
   return response.data;
 }
 
 async function getById(id: string): Promise<ProductCategory> {
-  const response = await apiClient.get<ApiResponse<ProductCategory>>(`/product-categories/${id}`);
+  const response = await apiClient.get<ApiResponse<ProductCategory>>(
+    `/product-categories/${id}`,
+  );
   return response.data.data;
 }
 
-async function create(payload: CreateProductCategoryPayload): Promise<ApiResponse<ProductCategory>> {
-  const response = await apiClient.post<ApiResponse<ProductCategory>>('/product-categories', payload);
+async function create(
+  payload: CreateProductCategoryPayload,
+): Promise<ApiResponse<ProductCategory>> {
+  const response = await apiClient.post<ApiResponse<ProductCategory>>(
+    "/product-categories",
+    payload,
+  );
   return response.data;
 }
 
-async function update(id: string, payload: UpdateProductCategoryPayload): Promise<ApiResponse<ProductCategory>> {
-  const response = await apiClient.patch<ApiResponse<ProductCategory>>(`/product-categories/${id}`, payload);
+async function update(
+  id: string,
+  payload: UpdateProductCategoryPayload,
+): Promise<ApiResponse<ProductCategory>> {
+  const response = await apiClient.patch<ApiResponse<ProductCategory>>(
+    `/product-categories/${id}`,
+    payload,
+  );
   return response.data;
 }
 

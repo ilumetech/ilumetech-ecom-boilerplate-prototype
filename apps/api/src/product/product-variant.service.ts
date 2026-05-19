@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateProductVariantDto, UpdateProductVariantDto } from './dto';
 
@@ -35,7 +39,10 @@ export class ProductVariantService {
         },
       },
     });
-    if (!variant) throw new NotFoundException(`Variant ${variantId} not found for this product`);
+    if (!variant)
+      throw new NotFoundException(
+        `Variant ${variantId} not found for this product`,
+      );
     return variant;
   }
 
@@ -44,7 +51,8 @@ export class ProductVariantService {
     const existingSku = await this.prisma.productVariant.findUnique({
       where: { sku: dto.sku },
     });
-    if (existingSku) throw new BadRequestException(`SKU ${dto.sku} is already in use`);
+    if (existingSku)
+      throw new BadRequestException(`SKU ${dto.sku} is already in use`);
 
     // 2. Validate option values belong to the same product
     const optionValueIds = dto.optionValueIds ?? [];
@@ -57,13 +65,17 @@ export class ProductVariantService {
     });
 
     if (optionValues.length !== optionValueIds.length) {
-      throw new BadRequestException('One or more option values do not belong to this product');
+      throw new BadRequestException(
+        'One or more option values do not belong to this product',
+      );
     }
 
     // 3. Validate one value per option
     const optionIds = optionValues.map((ov) => ov.optionId);
     if (new Set(optionIds).size !== optionIds.length) {
-      throw new BadRequestException('Each variant must have at most one value per option');
+      throw new BadRequestException(
+        'Each variant must have at most one value per option',
+      );
     }
 
     // 4. Validate unique combination per product
@@ -75,23 +87,13 @@ export class ProductVariantService {
     const newCombo = new Set(optionValueIds);
     for (const v of allVariants) {
       const vCombo = new Set(v.optionValues.map((ov) => ov.optionValueId));
-      if (vCombo.size === newCombo.size && [...vCombo].every((id) => newCombo.has(id))) {
-        throw new BadRequestException('A variant with this option combination already exists');
-      }
-    }
-
-    // 5. Handle isDefault
-    if (dto.isDefault) {
-      await this.prisma.productVariant.updateMany({
-        where: { productId, isDefault: true },
-        data: { isDefault: false },
-      });
-    } else {
-      const firstVariant = await this.prisma.productVariant.findFirst({
-        where: { productId },
-      });
-      if (!firstVariant) {
-        dto.isDefault = true;
+      if (
+        vCombo.size === newCombo.size &&
+        [...vCombo].every((id) => newCombo.has(id))
+      ) {
+        throw new BadRequestException(
+          'A variant with this option combination already exists',
+        );
       }
     }
 
@@ -100,10 +102,9 @@ export class ProductVariantService {
         productId,
         sku: dto.sku,
         name: dto.name,
-        price: dto.price,
+        ...this.buildVariantPricingData(dto),
         compareAtPrice: dto.compareAtPrice,
         imageUrl: dto.imageUrl,
-        isDefault: dto.isDefault ?? false,
         isActive: dto.isActive ?? true,
         optionValues: {
           create: optionValueIds.map((id) => ({
@@ -123,14 +124,19 @@ export class ProductVariantService {
     });
   }
 
-  async update(productId: string, variantId: string, dto: UpdateProductVariantDto) {
+  async update(
+    productId: string,
+    variantId: string,
+    dto: UpdateProductVariantDto,
+  ) {
     const variant = await this.findOne(productId, variantId);
 
     if (dto.sku && dto.sku !== variant.sku) {
       const existingSku = await this.prisma.productVariant.findUnique({
         where: { sku: dto.sku },
       });
-      if (existingSku) throw new BadRequestException(`SKU ${dto.sku} is already in use`);
+      if (existingSku)
+        throw new BadRequestException(`SKU ${dto.sku} is already in use`);
     }
 
     if (dto.optionValueIds) {
@@ -142,12 +148,16 @@ export class ProductVariantService {
       });
 
       if (optionValues.length !== dto.optionValueIds.length) {
-        throw new BadRequestException('One or more option values do not belong to this product');
+        throw new BadRequestException(
+          'One or more option values do not belong to this product',
+        );
       }
 
       const optionIds = optionValues.map((ov) => ov.optionId);
       if (new Set(optionIds).size !== optionIds.length) {
-        throw new BadRequestException('Each variant must have at most one value per option');
+        throw new BadRequestException(
+          'Each variant must have at most one value per option',
+        );
       }
 
       const otherVariants = await this.prisma.productVariant.findMany({
@@ -158,31 +168,48 @@ export class ProductVariantService {
       const newCombo = new Set(dto.optionValueIds);
       for (const v of otherVariants) {
         const vCombo = new Set(v.optionValues.map((ov) => ov.optionValueId));
-        if (vCombo.size === newCombo.size && [...vCombo].every((id) => newCombo.has(id))) {
-          throw new BadRequestException('A variant with this option combination already exists');
+        if (
+          vCombo.size === newCombo.size &&
+          [...vCombo].every((id) => newCombo.has(id))
+        ) {
+          throw new BadRequestException(
+            'A variant with this option combination already exists',
+          );
         }
       }
     }
 
-    if (dto.isDefault && !variant.isDefault) {
-      await this.prisma.productVariant.updateMany({
-        where: { productId, isDefault: true },
-        data: { isDefault: false },
-      });
-    }
+    const {
+      optionValueIds,
+      price,
+      finalPrice,
+      discountType,
+      discountValue,
+      discountMode,
+      ...updateData
+    } = dto;
 
-    const { optionValueIds, ...updateData } = dto;
+    const pricingData = this.buildUpdateVariantPricingData(variant, {
+      price,
+      finalPrice,
+      discountType,
+      discountValue,
+      discountMode,
+    });
 
     return this.prisma.productVariant.update({
       where: { id: variantId },
       data: {
         ...updateData,
-        optionValues: optionValueIds ? {
-          deleteMany: {},
-          create: optionValueIds.map((id) => ({
-            optionValueId: id,
-          })),
-        } : undefined,
+        ...pricingData,
+        optionValues: optionValueIds
+          ? {
+              deleteMany: {},
+              create: optionValueIds.map((id) => ({
+                optionValueId: id,
+              })),
+            }
+          : undefined,
       },
       include: {
         optionValues: {
@@ -201,6 +228,62 @@ export class ProductVariantService {
     await this.prisma.productVariant.update({
       where: { id: variantId },
       data: { isActive: false },
+    });
+  }
+
+  private buildVariantPricingData(variant: CreateProductVariantDto) {
+    const finalPrice = variant.finalPrice ?? variant.price;
+
+    if (finalPrice > variant.price) {
+      throw new BadRequestException(
+        'Final price cannot be greater than base price',
+      );
+    }
+
+    if (variant.discountMode === 'AUTOMATIC' && !variant.discountType) {
+      throw new BadRequestException(
+        'Automatic discounts require a discount type',
+      );
+    }
+
+    if (variant.discountType && variant.discountValue == null) {
+      throw new BadRequestException(
+        'Discount value is required when discount type is provided',
+      );
+    }
+
+    return {
+      price: variant.price,
+      finalPrice,
+      discountType: variant.discountType,
+      discountValue: variant.discountValue,
+      discountMode: variant.discountMode,
+    };
+  }
+
+  private buildUpdateVariantPricingData(
+    variant: Awaited<ReturnType<ProductVariantService['findOne']>>,
+    dto: Pick<
+      UpdateProductVariantDto,
+      'price' | 'finalPrice' | 'discountType' | 'discountValue' | 'discountMode'
+    >,
+  ) {
+    const hasPricingChange = Object.values(dto).some(
+      (value) => value !== undefined,
+    );
+    if (!hasPricingChange) return {};
+
+    const price = dto.price ?? variant.price.toNumber();
+    const finalPrice = dto.finalPrice ?? price;
+
+    return this.buildVariantPricingData({
+      sku: variant.sku,
+      name: variant.name,
+      price,
+      finalPrice,
+      discountType: dto.discountType,
+      discountValue: dto.discountValue,
+      discountMode: dto.discountMode,
     });
   }
 }

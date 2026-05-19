@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { authApi } from '@/lib/api/auth';
+import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { authApi } from "@/lib/api/auth";
 
 interface UsePermissionsReturn {
   permissions: string[];
@@ -12,7 +12,7 @@ interface UsePermissionsReturn {
 
 export function usePermissions(): UsePermissionsReturn {
   const { data, isLoading } = useQuery({
-    queryKey: ['auth', 'me'],
+    queryKey: ["auth", "me"],
     queryFn: authApi.getMe,
   });
 

@@ -1,8 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { buildPaginationMeta, buildPrismaQuery, slugify } from '../common/utils';
+import {
+  buildPaginationMeta,
+  buildPrismaQuery,
+  slugify,
+} from '../common/utils';
 import type { PaginatedResponse, ProductCategory } from '@ilumetech/types';
-import type { CreateProductCategoryDto, ProductCategoryQueryDto, UpdateProductCategoryDto } from './dto';
+import type {
+  CreateProductCategoryDto,
+  ProductCategoryQueryDto,
+  UpdateProductCategoryDto,
+} from './dto';
 
 interface PrismaProductCategory {
   id: string;
@@ -18,8 +26,11 @@ interface PrismaProductCategory {
 export class ProductCategoryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: ProductCategoryQueryDto): Promise<PaginatedResponse<ProductCategory>> {
-    const filters = query.isActive !== undefined ? { isActive: query.isActive } : {};
+  async findAll(
+    query: ProductCategoryQueryDto,
+  ): Promise<PaginatedResponse<ProductCategory>> {
+    const filters =
+      query.isActive !== undefined ? { isActive: query.isActive } : {};
 
     const { skip, take, where, orderBy } = buildPrismaQuery({
       search: query.search,
@@ -44,9 +55,12 @@ export class ProductCategoryService {
   }
 
   async findOne(id: string): Promise<ProductCategory> {
-    const category = await this.prisma.productCategory.findUnique({ where: { id } });
+    const category = await this.prisma.productCategory.findUnique({
+      where: { id },
+    });
 
-    if (!category) throw new NotFoundException(`ProductCategory ${id} not found`);
+    if (!category)
+      throw new NotFoundException(`ProductCategory ${id} not found`);
 
     return this.mapToResponse(category);
   }
@@ -65,7 +79,10 @@ export class ProductCategoryService {
     return this.mapToResponse(category);
   }
 
-  async update(id: string, dto: UpdateProductCategoryDto): Promise<ProductCategory> {
+  async update(
+    id: string,
+    dto: UpdateProductCategoryDto,
+  ): Promise<ProductCategory> {
     const existing = await this.findOne(id);
     const data: any = { ...dto };
 
@@ -81,7 +98,10 @@ export class ProductCategoryService {
     return this.mapToResponse(category);
   }
 
-  private async generateUniqueSlug(name: string, currentId?: string): Promise<string> {
+  private async generateUniqueSlug(
+    name: string,
+    currentId?: string,
+  ): Promise<string> {
     const baseSlug = slugify(name);
     let slug = baseSlug;
     let counter = 1;

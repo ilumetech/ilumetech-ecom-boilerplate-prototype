@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useAuth } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { apiClient } from '@/lib/api/client';
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { apiClient } from "@/lib/api/client";
 
 export function ApiAuthInjector() {
   const { getToken } = useAuth();
@@ -19,7 +19,7 @@ export function ApiAuthInjector() {
     const responseId = apiClient.interceptors.response.use(
       (response) => response,
       (error: { response?: { status: number } }) => {
-        if (error.response?.status === 401) router.push('/sign-in');
+        if (error.response?.status === 401) router.push("/sign-in");
         return Promise.reject(error);
       },
     );

@@ -68,8 +68,12 @@ function UserDescriptions({ user }: { user: AppUser }) {
 
   return (
     <Descriptions column={1} bordered size="small">
-      <Descriptions.Item label={USER_LABELS.username}>{displayName}</Descriptions.Item>
-      <Descriptions.Item label={USER_LABELS.email}>{user.email || "—"}</Descriptions.Item>
+      <Descriptions.Item label={USER_LABELS.username}>
+        {displayName}
+      </Descriptions.Item>
+      <Descriptions.Item label={USER_LABELS.email}>
+        {user.email || "—"}
+      </Descriptions.Item>
       <Descriptions.Item label={USER_LABELS.role}>
         {user.primaryRole ?? "—"}
       </Descriptions.Item>

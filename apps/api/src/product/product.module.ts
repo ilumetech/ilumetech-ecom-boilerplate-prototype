@@ -7,6 +7,11 @@ import { PermissionsGuard } from '../common/guards';
 
 @Module({
   controllers: [ProductController],
-  providers: [ProductService, ProductOptionService, ProductVariantService, PermissionsGuard],
+  providers: [
+    ProductService,
+    ProductOptionService,
+    ProductVariantService,
+    PermissionsGuard,
+  ],
 })
 export class ProductModule {}

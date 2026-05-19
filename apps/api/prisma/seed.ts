@@ -1,7 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import { seedRbac } from './seeders/rbac.seeder';
 import { seedUnits } from './seeders/unit.seeder';
-import { seedProductCounter, seedSystemConfig } from './seeders/system-config.seeder';
+import {
+  seedProductCounter,
+  seedSystemConfig,
+} from './seeders/system-config.seeder';
 import { seedProducts } from './seeders/product.seeder';
 
 const prisma = new PrismaClient();

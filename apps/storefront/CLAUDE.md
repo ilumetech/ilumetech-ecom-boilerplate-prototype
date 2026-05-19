@@ -1,14 +1,17 @@
 # apps/storefront — Next.js Public Ecommerce Site
 
 # Inherits all rules from root CLAUDE.md.
+
 # Rules here are specific to the public-facing storefront app.
 
 ## Purpose
+
 The storefront is the public-facing ecommerce site.
 It serves customers browsing products, managing their cart, checking out, and viewing orders.
 It is NOT an admin tool — keep it fast, beautiful, and SEO-optimized.
 
 ## Stack
+
 - Next.js App Router (no Pages Router — never use pages/)
 - TypeScript only
 - Shadcn/ui for all UI components
@@ -18,31 +21,33 @@ It is NOT an admin tool — keep it fast, beautiful, and SEO-optimized.
 - Next.js Metadata API for SEO — no third-party SEO libraries
 
 ## Folder Structure
+
 apps/storefront/
-  app/
-    (public)/             Public routes — no auth required
-      page.tsx            Homepage
-      products/           Product listing and detail pages
-        page.tsx          Product catalog
-        [slug]/page.tsx   Product detail (SSR for SEO)
-      cart/               Cart page
-      checkout/           Checkout flow
-    (customer)/           Protected routes — requires customer auth
-      account/            Customer account (orders, profile, addresses)
-    layout.tsx            Root layout (font, theme, global styles)
-  components/
-    ui/                   Shadcn/ui component wrappers and extensions
-    layout/               Header, Footer, Navigation
-    product/              Product card, product grid, product detail
-    cart/                 Cart drawer, cart item, cart summary
-    checkout/             Checkout form steps
-  lib/
-    api/                  Typed API service functions (one file per domain)
-    hooks/                Custom React hooks
-    utils/                Helper functions
-  types/                  Storefront-only types (import shared types from packages/types)
+app/
+(public)/ Public routes — no auth required
+page.tsx Homepage
+products/ Product listing and detail pages
+page.tsx Product catalog
+[slug]/page.tsx Product detail (SSR for SEO)
+cart/ Cart page
+checkout/ Checkout flow
+(customer)/ Protected routes — requires customer auth
+account/ Customer account (orders, profile, addresses)
+layout.tsx Root layout (font, theme, global styles)
+components/
+ui/ Shadcn/ui component wrappers and extensions
+layout/ Header, Footer, Navigation
+product/ Product card, product grid, product detail
+cart/ Cart drawer, cart item, cart summary
+checkout/ Checkout form steps
+lib/
+api/ Typed API service functions (one file per domain)
+hooks/ Custom React hooks
+utils/ Helper functions
+types/ Storefront-only types (import shared types from packages/types)
 
 ## Rendering Strategy
+
 - Product catalog pages → Server Components (SSR/SSG for SEO)
 - Product detail pages → Server Components with generateStaticParams for SSG
 - Cart, wishlist, account pages → Client Components (user-specific, no SEO value)
@@ -50,6 +55,7 @@ apps/storefront/
 - Use TanStack Query only for client-side user-specific data (cart, account)
 
 ## Component Rules
+
 - Default to Server Components — only add "use client" when necessary
 - "use client" is required for: useState, useEffect, event handlers, TanStack Query hooks, all Shadcn interactive components
 - Keep components small — if a component exceeds ~150 lines, split it
@@ -57,6 +63,7 @@ apps/storefront/
 - No hardcoded colors — use Tailwind semantic color tokens defined in tailwind.config.ts
 
 ## Shadcn Usage Rules
+
 - Use Shadcn for all interactive UI: buttons, inputs, dialogs, dropdowns, sheets, toasts
 - Never build custom components for things Shadcn already covers
 - Extend Shadcn components via className — never modify the base component file
@@ -65,6 +72,7 @@ apps/storefront/
 - Use Shadcn Toast (Sonner) for all feedback messages
 
 ## SEO Rules (non-negotiable for ecommerce)
+
 - Every page must export a generateMetadata function or static metadata object
 - Product detail pages must include: title, description, openGraph image, canonical URL
 - Product detail pages must include JSON-LD structured data (Product schema)
@@ -74,38 +82,40 @@ apps/storefront/
 - Never block indexing on public pages — only block /account and /checkout
 
 ## Metadata Pattern
+
 // Static metadata
 export const metadata: Metadata = {
-  title: 'Store Name',
-  description: 'Store description',
+title: 'Store Name',
+description: 'Store description',
 }
 
 // Dynamic metadata (product pages)
 export async function generateMetadata({ params }): Promise<Metadata> {
-  const product = await getProduct(params.slug)
-  return {
-    title: product.name,
-    description: product.description,
-    openGraph: { images: [product.image] },
-  }
+const product = await getProduct(params.slug)
+return {
+title: product.name,
+description: product.description,
+openGraph: { images: [product.image] },
+}
 }
 
 ## JSON-LD Pattern (Product Pages)
+
 // Add as a script tag in the page component — no library needed
 const jsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Product',
-  name: product.name,
-  description: product.description,
-  image: product.image,
-  offers: {
-    '@type': 'Offer',
-    price: product.sellingPrice,
-    priceCurrency: 'IDR',
-    availability: product.stock > 0
-      ? 'https://schema.org/InStock'
-      : 'https://schema.org/OutOfStock',
-  },
+'@context': 'https://schema.org',
+'@type': 'Product',
+name: product.name,
+description: product.description,
+image: product.image,
+offers: {
+'@type': 'Offer',
+price: product.sellingPrice,
+priceCurrency: 'IDR',
+availability: product.stock > 0
+? 'https://schema.org/InStock'
+: 'https://schema.org/OutOfStock',
+},
 }
 
 <script

@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { App, Button, Input, Space, Table, Tag } from "antd";
-import { EditOutlined, DeleteOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TableColumnsType, TablePaginationConfig } from "antd";
 import type { SorterResult } from "antd/es/table/interface";
@@ -24,6 +29,14 @@ function formatRupiah(value: number): string {
   }).format(value);
 }
 
+function getCurrentProductPrice(product: Product): number {
+  const activeVariants =
+    product.variants?.filter((variant) => variant.isActive) ?? [];
+  if (activeVariants.length === 0) return product.sellingPrice;
+
+  return Math.min(...activeVariants.map((variant) => variant.finalPrice));
+}
+
 function mapSortOrder(
   antdOrder: "ascend" | "descend" | null | undefined,
 ): "asc" | "desc" | undefined {
@@ -37,7 +50,10 @@ export function ProductTable() {
   const { modal, message } = App.useApp();
   const queryClient = useQueryClient();
 
-  const [queryParams, setQueryParams] = useState<ProductQueryParams>({ page: 1, limit: 10 });
+  const [queryParams, setQueryParams] = useState<ProductQueryParams>({
+    page: 1,
+    limit: 10,
+  });
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["products", "list", queryParams],
@@ -108,7 +124,11 @@ export function ProductTable() {
           placeholder="Cari produk..."
           allowClear
           onSearch={(value) =>
-            setQueryParams((prev) => ({ ...prev, page: 1, search: value || undefined }))
+            setQueryParams((prev) => ({
+              ...prev,
+              page: 1,
+              search: value || undefined,
+            }))
           }
           style={{ width: 240 }}
         />
@@ -126,7 +146,9 @@ export function ProductTable() {
           showSizeChanger: true,
           pageSizeOptions: ["10", "25", "50"],
         }}
-        onRow={(record) => ({ onClick: () => router.push(`/products/${record.id}`) })}
+        onRow={(record) => ({
+          onClick: () => router.push(`/products/${record.id}`),
+        })}
         rowClassName="cursor-pointer"
       />
     </>
@@ -138,7 +160,10 @@ interface ColumnParams {
   onDelete: (p: Product) => void;
 }
 
-function buildColumns({ onEdit, onDelete }: ColumnParams): TableColumnsType<Product> {
+function buildColumns({
+  onEdit,
+  onDelete,
+}: ColumnParams): TableColumnsType<Product> {
   return [
     {
       title: PRODUCT_LABELS.code,
@@ -169,7 +194,8 @@ function buildColumns({ onEdit, onDelete }: ColumnParams): TableColumnsType<Prod
     {
       title: PRODUCT_LABELS.productCategory,
       key: "productCategory",
-      render: (_: unknown, record: Product) => record.productCategory.name ?? "—",
+      render: (_: unknown, record: Product) =>
+        record.productCategory.name ?? "—",
     },
     {
       title: PRODUCT_LABELS.unit,
@@ -177,15 +203,20 @@ function buildColumns({ onEdit, onDelete }: ColumnParams): TableColumnsType<Prod
       render: (_: unknown, record: Product) => record.unit.name ?? "—",
     },
     {
-      title: PRODUCT_LABELS.sellingPrice,
-      key: "sellingPrice",
-      render: (_: unknown, record: Product) => formatRupiah(record.sellingPrice),
+      title: PRODUCT_LABELS.finalPrice,
+      key: "finalPrice",
+      render: (_: unknown, record: Product) =>
+        formatRupiah(getCurrentProductPrice(record)),
     },
     {
       title: PRODUCT_LABELS.isActive,
       key: "isActive",
       render: (_: unknown, record: Product) =>
-        record.isActive ? <Tag color="green">Aktif</Tag> : <Tag color="red">Nonaktif</Tag>,
+        record.isActive ? (
+          <Tag color="green">Aktif</Tag>
+        ) : (
+          <Tag color="red">Nonaktif</Tag>
+        ),
     },
     {
       title: "Aksi",
@@ -193,7 +224,11 @@ function buildColumns({ onEdit, onDelete }: ColumnParams): TableColumnsType<Prod
       render: (_: unknown, record: Product) => (
         <Space size="small" onClick={(e) => e.stopPropagation()}>
           <Can permission={PERMISSIONS.PRODUCT.UPDATE}>
-            <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(record)}
+            />
           </Can>
           <Can permission={PERMISSIONS.PRODUCT.DELETE}>
             <Button

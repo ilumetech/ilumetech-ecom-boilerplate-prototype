@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { Button, Result } from 'antd';
+import Link from "next/link";
+import { Button, Result } from "antd";
 
 export default function UnauthorizedPage() {
   return (

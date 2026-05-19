@@ -1,23 +1,28 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { App, Button, Input, Space, Table, Tag } from 'antd';
-import { EditOutlined, DeleteOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { TableColumnsType, TablePaginationConfig } from 'antd';
-import type { SorterResult, FilterValue } from 'antd/es/table/interface';
-import type { AppUser } from '@ilumetech/types';
-import { PERMISSIONS } from '@ilumetech/types';
-import { userApi } from '@/lib/api/user';
-import { USER_LABELS } from '@/lib/labels/user';
-import type { UserQueryParams } from '@/lib/api/user';
-import { handleError } from '@/lib/utils/handle-error';
-import { UserDetailModal } from './UserDetailModal';
-import { UserFormModal } from './UserFormModal';
-import { Can } from '@/components/auth/Can';
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { App, Button, Input, Space, Table, Tag } from "antd";
+import {
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { TableColumnsType, TablePaginationConfig } from "antd";
+import type { SorterResult, FilterValue } from "antd/es/table/interface";
+import type { AppUser } from "@ilumetech/types";
+import { PERMISSIONS } from "@ilumetech/types";
+import { userApi } from "@/lib/api/user";
+import { USER_LABELS } from "@/lib/labels/user";
+import type { UserQueryParams } from "@/lib/api/user";
+import { handleError } from "@/lib/utils/handle-error";
+import { UserDetailModal } from "./UserDetailModal";
+import { UserFormModal } from "./UserFormModal";
+import { Can } from "@/components/auth/Can";
 
-type FormMode = 'create' | 'edit';
+type FormMode = "create" | "edit";
 
 export function UserTable() {
   const searchParams = useSearchParams();
@@ -26,14 +31,17 @@ export function UserTable() {
   const queryClient = useQueryClient();
 
   const [formOpen, setFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState<FormMode>('create');
+  const [formMode, setFormMode] = useState<FormMode>("create");
   const [editTarget, setEditTarget] = useState<AppUser | null>(null);
-  const [queryParams, setQueryParams] = useState<UserQueryParams>({ page: 1, limit: 10 });
+  const [queryParams, setQueryParams] = useState<UserQueryParams>({
+    page: 1,
+    limit: 10,
+  });
 
-  const detailUserId = searchParams.get('detail');
+  const detailUserId = searchParams.get("detail");
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['users', 'list', queryParams],
+    queryKey: ["users", "list", queryParams],
     queryFn: () => userApi.getUsers(queryParams),
   });
 
@@ -45,8 +53,8 @@ export function UserTable() {
   const removeMutation = useMutation({
     mutationFn: (userId: string) => userApi.removeUser(userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users', 'list'] });
-      message.success('Pengguna berhasil dihapus');
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      message.success("Pengguna berhasil dihapus");
     },
     onError: handleError,
   });
@@ -56,19 +64,19 @@ export function UserTable() {
   }
 
   function handleDetailClose() {
-    router.replace('/users');
+    router.replace("/users");
   }
 
   function handleOpenCreate() {
     setEditTarget(null);
-    setFormMode('create');
+    setFormMode("create");
     setFormOpen(true);
   }
 
   function handleEditRequest(user: AppUser) {
-    router.replace('/users');
+    router.replace("/users");
     setEditTarget(user);
-    setFormMode('edit');
+    setFormMode("edit");
     setFormOpen(true);
   }
 
@@ -78,17 +86,17 @@ export function UserTable() {
   }
 
   function handleFormSuccess() {
-    queryClient.invalidateQueries({ queryKey: ['users', 'list'] });
+    queryClient.invalidateQueries({ queryKey: ["users", "list"] });
     handleFormClose();
   }
 
   function confirmDelete(user: AppUser) {
     modal.confirm({
-      title: 'Hapus Pengguna',
+      title: "Hapus Pengguna",
       content: `Apakah Anda yakin ingin menghapus "${resolveDisplayName(user)}"? Tindakan ini tidak dapat dibatalkan.`,
-      okText: 'Hapus',
+      okText: "Hapus",
       okButtonProps: { danger: true },
-      cancelText: 'Batal',
+      cancelText: "Batal",
       onOk: () => removeMutation.mutate(user.id),
     });
   }
@@ -125,7 +133,11 @@ export function UserTable() {
       <div className="flex justify-between mb-4">
         <Space>
           <Can permission={PERMISSIONS.USER.INVITE}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleOpenCreate}
+            >
               Tambah Pengguna
             </Button>
           </Can>
@@ -177,8 +189,8 @@ export function UserTable() {
 
 function resolveDisplayName(user: AppUser): string {
   if (user.username) return user.username;
-  const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
-  return fullName || '—';
+  const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
+  return fullName || "—";
 }
 
 interface ColumnBuilderParams {
@@ -187,37 +199,40 @@ interface ColumnBuilderParams {
 }
 
 function mapSortOrder(
-  antdOrder: 'ascend' | 'descend' | null | undefined,
-): 'asc' | 'desc' | undefined {
-  if (antdOrder === 'ascend') return 'asc';
-  if (antdOrder === 'descend') return 'desc';
+  antdOrder: "ascend" | "descend" | null | undefined,
+): "asc" | "desc" | undefined {
+  if (antdOrder === "ascend") return "asc";
+  if (antdOrder === "descend") return "desc";
   return undefined;
 }
 
-function buildTableColumns({ onEdit, onDelete }: ColumnBuilderParams): TableColumnsType<AppUser> {
+function buildTableColumns({
+  onEdit,
+  onDelete,
+}: ColumnBuilderParams): TableColumnsType<AppUser> {
   return [
     {
       title: USER_LABELS.username,
-      key: 'displayName',
+      key: "displayName",
       render: (_: unknown, record: AppUser) => resolveDisplayName(record),
     },
     {
       title: USER_LABELS.email,
-      dataIndex: 'email',
-      key: 'email',
+      dataIndex: "email",
+      key: "email",
       sorter: true,
     },
     {
       title: USER_LABELS.role,
-      key: 'primaryRole',
-      render: (_: unknown, record: AppUser) => record.primaryRole ?? '—',
+      key: "primaryRole",
+      render: (_: unknown, record: AppUser) => record.primaryRole ?? "—",
     },
     {
       title: USER_LABELS.isActive,
-      key: 'isActive',
+      key: "isActive",
       filters: [
-        { text: 'Aktif', value: true },
-        { text: 'Nonaktif', value: false },
+        { text: "Aktif", value: true },
+        { text: "Nonaktif", value: false },
       ],
       filterMultiple: false,
       render: (_: unknown, record: AppUser) =>
@@ -228,8 +243,8 @@ function buildTableColumns({ onEdit, onDelete }: ColumnBuilderParams): TableColu
         ),
     },
     {
-      title: 'Aksi',
-      key: 'actions',
+      title: "Aksi",
+      key: "actions",
       render: (_: unknown, record: AppUser) => (
         <Space size="small" onClick={(e) => e.stopPropagation()}>
           <Can permission={PERMISSIONS.USER.UPDATE}>

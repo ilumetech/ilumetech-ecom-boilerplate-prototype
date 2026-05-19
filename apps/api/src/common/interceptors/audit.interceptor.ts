@@ -1,4 +1,9 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -29,10 +34,10 @@ export class AuditInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const auditMetadata = this.reflector.getAllAndOverride<AuditMetadata>(AUDIT_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const auditMetadata = this.reflector.getAllAndOverride<AuditMetadata>(
+      AUDIT_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (!auditMetadata) return next.handle();
 
@@ -44,9 +49,17 @@ export class AuditInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap(async (responseBody) => {
         try {
-          await this.createAuditLog(request, responseBody, auditMetadata, action);
+          await this.createAuditLog(
+            request,
+            responseBody,
+            auditMetadata,
+            action,
+          );
         } catch (error) {
-          console.error('[AuditInterceptor] Failed to create audit log:', error);
+          console.error(
+            '[AuditInterceptor] Failed to create audit log:',
+            error,
+          );
         }
       }),
     );
@@ -68,7 +81,10 @@ export class AuditInterceptor implements NestInterceptor {
         entityId: this.extractEntityId(responseBody, request.params),
         action,
         category: metadata.category as AuditCategory,
-        diff: action !== 'DELETE' ? (request.body as Prisma.InputJsonValue) : undefined,
+        diff:
+          action !== 'DELETE'
+            ? (request.body as Prisma.InputJsonValue)
+            : undefined,
       },
     });
   }

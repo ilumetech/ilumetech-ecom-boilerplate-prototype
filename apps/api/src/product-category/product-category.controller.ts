@@ -1,16 +1,32 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { AuditCategory } from '@prisma/client';
 import { ClerkAuthGuard, PermissionsGuard } from '../common/guards';
 import { Audit, Permissions } from '../common/decorators';
 import { PERMISSIONS } from '@ilumetech/types';
 import { ProductCategoryService } from './product-category.service';
-import { CreateProductCategoryDto, ProductCategoryQueryDto, UpdateProductCategoryDto } from './dto';
+import {
+  CreateProductCategoryDto,
+  ProductCategoryQueryDto,
+  UpdateProductCategoryDto,
+} from './dto';
 
 @Controller('product-categories')
 @UseGuards(ClerkAuthGuard, PermissionsGuard)
 @Audit('product-category', AuditCategory.OPERATIONAL)
 export class ProductCategoryController {
-  constructor(private readonly productCategoryService: ProductCategoryService) {}
+  constructor(
+    private readonly productCategoryService: ProductCategoryService,
+  ) {}
 
   @Get()
   @Permissions(PERMISSIONS.PRODUCT_CATEGORY.READ)

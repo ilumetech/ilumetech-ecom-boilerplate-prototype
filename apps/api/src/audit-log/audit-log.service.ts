@@ -30,10 +30,18 @@ export class AuditLogService {
     const resolvedOrderBy = orderBy ?? { createdAt: 'desc' as const };
 
     const [data, total] = await Promise.all([
-      this.prisma.auditLog.findMany({ skip, take, where, orderBy: resolvedOrderBy }),
+      this.prisma.auditLog.findMany({
+        skip,
+        take,
+        where,
+        orderBy: resolvedOrderBy,
+      }),
       this.prisma.auditLog.count({ where }),
     ]);
 
-    return { data, meta: buildPaginationMeta(total, query.page ?? 1, query.limit ?? 10) };
+    return {
+      data,
+      meta: buildPaginationMeta(total, query.page ?? 1, query.limit ?? 10),
+    };
   }
 }

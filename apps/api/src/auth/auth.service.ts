@@ -17,16 +17,21 @@ export class AuthService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   onModuleInit(): void {
-    this.clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
+    this.clerk = createClerkClient({
+      secretKey: process.env.CLERK_SECRET_KEY!,
+    });
   }
 
   async getMe(clerkUserId: string): Promise<MeResponse> {
     const { email, username } = await this.fetchClerkUserInfo(clerkUserId);
-    const { roles, permissions } = await this.fetchRolesAndPermissions(clerkUserId);
+    const { roles, permissions } =
+      await this.fetchRolesAndPermissions(clerkUserId);
     return { clerkUserId, email, username, roles, permissions };
   }
 
-  private async fetchClerkUserInfo(clerkUserId: string): Promise<{ email: string; username: string }> {
+  private async fetchClerkUserInfo(
+    clerkUserId: string,
+  ): Promise<{ email: string; username: string }> {
     const clerkUser = await this.clerk.users.getUser(clerkUserId);
     const primaryEmail = clerkUser.emailAddresses.find(
       (address) => address.id === clerkUser.primaryEmailAddressId,
@@ -42,7 +47,9 @@ export class AuthService implements OnModuleInit {
   ): Promise<{ roles: string[]; permissions: string[] }> {
     const user = await this.prisma.user.findUnique({
       where: { id: clerkUserId },
-      include: { role: { include: { permissions: { include: { permission: true } } } } },
+      include: {
+        role: { include: { permissions: { include: { permission: true } } } },
+      },
     });
 
     if (!user?.role) return { roles: [], permissions: [] };

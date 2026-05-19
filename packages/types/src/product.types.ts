@@ -47,9 +47,12 @@ export interface ProductVariant {
   sku: string;
   name: string;
   price: number;
+  finalPrice: number;
   compareAtPrice: number | null;
+  discountType: "PERCENTAGE" | "FIXED_AMOUNT" | null;
+  discountValue: number | null;
+  discountMode: "AUTOMATIC" | "MANUAL" | null;
   imageUrl: string | null;
-  isDefault: boolean;
   isActive: boolean;
   optionValues: ProductVariantOptionValue[];
 }

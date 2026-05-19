@@ -6,9 +6,9 @@ async function checkPermissions() {
   const permissions = await prisma.permission.findMany({
     where: {
       action: {
-        contains: 'color'
-      }
-    }
+        contains: 'color',
+      },
+    },
   });
   console.log('Color permissions in DB:', permissions);
 
@@ -16,14 +16,16 @@ async function checkPermissions() {
     include: {
       permissions: {
         include: {
-          permission: true
-        }
-      }
-    }
+          permission: true,
+        },
+      },
+    },
   });
-  
-  roles.forEach(role => {
-    const hasColorRead = role.permissions.some(p => p.permission.action === 'color:read');
+
+  roles.forEach((role) => {
+    const hasColorRead = role.permissions.some(
+      (p) => p.permission.action === 'color:read',
+    );
     console.log(`Role: ${role.name}, Has color:read: ${hasColorRead}`);
   });
 }

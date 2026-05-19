@@ -37,7 +37,10 @@ async function getRoleIdForUser(clerkUserId: string): Promise<string | null> {
   }
 }
 
-async function upsertClerkUser(clerkUser: ClerkUser, roleId: string | null): Promise<void> {
+async function upsertClerkUser(
+  clerkUser: ClerkUser,
+  roleId: string | null,
+): Promise<void> {
   const primaryEmail = clerkUser.emailAddresses.find(
     (e) => e.id === clerkUser.primaryEmailAddressId,
   );
@@ -55,7 +58,11 @@ async function upsertClerkUser(clerkUser: ClerkUser, roleId: string | null): Pro
   await prisma.user.upsert({
     where: { id: clerkUser.id },
     update: data,
-    create: { id: clerkUser.id, createdAt: new Date(clerkUser.createdAt), ...data },
+    create: {
+      id: clerkUser.id,
+      createdAt: new Date(clerkUser.createdAt),
+      ...data,
+    },
   });
 }
 
@@ -69,7 +76,8 @@ async function main(): Promise<void> {
     const roleId = await getRoleIdForUser(clerkUser.id);
     await upsertClerkUser(clerkUser, roleId);
     synced++;
-    if (synced % 50 === 0) console.log(`Progress: ${synced}/${clerkUsers.length}`);
+    if (synced % 50 === 0)
+      console.log(`Progress: ${synced}/${clerkUsers.length}`);
   }
 
   console.log(`Done. Synced ${synced} users.`);

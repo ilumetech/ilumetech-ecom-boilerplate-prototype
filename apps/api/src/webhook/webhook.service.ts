@@ -13,7 +13,11 @@ type SvixHeaders = {
 export class WebhookService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async handleEvent(rawBody: Buffer, headers: SvixHeaders, event: WebhookEvent): Promise<void> {
+  async handleEvent(
+    rawBody: Buffer,
+    headers: SvixHeaders,
+    event: WebhookEvent,
+  ): Promise<void> {
     this.verifySignature(rawBody, headers);
     await this.routeEvent(event);
   }
@@ -55,7 +59,11 @@ export class WebhookService {
     await this.prisma.user.upsert({
       where: { id: data.id },
       update: userData,
-      create: { id: data.id, createdAt: new Date(data.created_at), ...userData },
+      create: {
+        id: data.id,
+        createdAt: new Date(data.created_at),
+        ...userData,
+      },
     });
   }
 

@@ -1,10 +1,10 @@
-import { Button } from "@/components/ui/button"
-import { Plus, MapPin, Pencil, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button";
+import { Plus, MapPin, Pencil, Trash2 } from "lucide-react";
 
 export const metadata = {
   title: "Addresses | Account",
   description: "Manage your shipping and billing addresses",
-}
+};
 
 const addresses = [
   {
@@ -31,14 +31,16 @@ const addresses = [
     country: "United States",
     phone: "+1 (555) 111-1111",
   },
-]
+];
 
 export default function AddressesPage() {
   return (
     <div className="space-y-12 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-black uppercase tracking-tight">Addresses</h2>
+          <h2 className="text-3xl font-black uppercase tracking-tight">
+            Addresses
+          </h2>
           <p className="mt-2 text-xs font-bold uppercase tracking-widest text-zinc-500">
             Manage your shipping and billing addresses.
           </p>
@@ -60,7 +62,7 @@ export default function AddressesPage() {
                 Default
               </div>
             )}
-            
+
             <div className="p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-zinc-100 group-hover:bg-black group-hover:text-white transition-colors">
@@ -72,12 +74,18 @@ export default function AddressesPage() {
               </div>
 
               <div className="space-y-1">
-                <p className="text-sm font-black uppercase tracking-tight">{address.name}</p>
-                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{address.street}</p>
+                <p className="text-sm font-black uppercase tracking-tight">
+                  {address.name}
+                </p>
+                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                  {address.street}
+                </p>
                 <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
                   {address.city}, {address.state} {address.zip}
                 </p>
-                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{address.country}</p>
+                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                  {address.country}
+                </p>
                 <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-zinc-400">
                   Phone: <span className="text-zinc-600">{address.phone}</span>
                 </p>
@@ -102,12 +110,14 @@ export default function AddressesPage() {
           <div className="p-4 bg-zinc-100 rounded-full group-hover:bg-black group-hover:text-white transition-all mb-4">
             <Plus className="h-8 w-8" />
           </div>
-          <span className="text-xs font-black uppercase tracking-widest">Add another address</span>
+          <span className="text-xs font-black uppercase tracking-widest">
+            Add another address
+          </span>
           <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
             For faster checkout
           </p>
         </button>
       </div>
     </div>
-  )
+  );
 }

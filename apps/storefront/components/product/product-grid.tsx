@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import { ProductCard } from './product-card'
+import { ProductCard } from "./product-card";
 
 interface Product {
-  id: number
-  name: string
-  colorway: string
-  price: string
+  id: number;
+  name: string;
+  colorway: string;
+  price: string;
 }
 
 interface ProductGridProps {
-  products: Product[]
+  products: Product[];
 }
 
 export default function ProductGrid({ products }: ProductGridProps) {
@@ -36,17 +36,18 @@ export default function ProductGrid({ products }: ProductGridProps) {
           No items found
         </h3>
         <p className="mt-2 max-w-[280px] text-sm leading-6 text-zinc-500">
-          We couldn't find any products matching your current selection. Try clearing your filters.
+          We couldn't find any products matching your current selection. Try
+          clearing your filters.
         </p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:gap-x-8">
       {products.map((product, index) => (
-        <div 
-          key={product.id} 
+        <div
+          key={product.id}
           className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
           style={{ animationDelay: `${index * 50}ms` }}
         >
@@ -54,5 +55,5 @@ export default function ProductGrid({ products }: ProductGridProps) {
         </div>
       ))}
     </div>
-  )
+  );
 }

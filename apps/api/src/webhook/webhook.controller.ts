@@ -1,4 +1,11 @@
-import { BadRequestException, Body, Controller, Headers, Post, Req } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Headers,
+  Post,
+  Req,
+} from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import type { WebhookEvent } from '@clerk/backend';
 import { WebhookService } from './webhook.service';
@@ -21,7 +28,11 @@ export class WebhookController {
 
     await this.webhookService.handleEvent(
       request.rawBody,
-      { 'svix-id': svixId, 'svix-timestamp': svixTimestamp, 'svix-signature': svixSignature },
+      {
+        'svix-id': svixId,
+        'svix-timestamp': svixTimestamp,
+        'svix-signature': svixSignature,
+      },
       body,
     );
   }

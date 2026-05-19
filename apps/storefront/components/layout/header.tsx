@@ -1,18 +1,26 @@
 // components/header.tsx
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useState } from 'react'
-import { Menu, Search, User, ShoppingBag, MessageCircle, Package, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import Link from "next/link";
+import { useState } from "react";
+import {
+  Menu,
+  Search,
+  User,
+  ShoppingBag,
+  MessageCircle,
+  Package,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet'
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,24 +28,24 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Separator } from '@/components/ui/separator'
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 
 const navItems = [
-  { label: 'Home', href: '/' },
-  { label: 'Men', href: '/products?category=men' },
-  { label: 'Women', href: '/products?category=women' },
-  { label: 'Sneakers', href: '/products?category=sneakers' },
-  { label: 'Sale', href: '/products?category=sale' },
-  { label: 'About Us', href: '/about' },
-]
+  { label: "Home", href: "/" },
+  { label: "Men", href: "/products?category=men" },
+  { label: "Women", href: "/products?category=women" },
+  { label: "Sneakers", href: "/products?category=sneakers" },
+  { label: "Sale", href: "/products?category=sale" },
+  { label: "About Us", href: "/about" },
+];
 
 type HeaderProps = {
-  cartCount?: number
-}
+  cartCount?: number;
+};
 
 export function Header({ cartCount = 0 }: HeaderProps) {
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white">
@@ -46,11 +54,17 @@ export function Header({ cartCount = 0 }: HeaderProps) {
           <p>Welcome to Storefront Official Store</p>
 
           <div className="hidden items-center gap-6 md:flex">
-            <Link href="https://wa.me/6281234567890" className="flex items-center gap-2 hover:opacity-70">
+            <Link
+              href="https://wa.me/6281234567890"
+              className="flex items-center gap-2 hover:opacity-70"
+            >
               <MessageCircle className="h-3.5 w-3.5" />
               Order via WhatsApp
             </Link>
-            <Link href="/track" className="flex items-center gap-2 hover:opacity-70">
+            <Link
+              href="/track"
+              className="flex items-center gap-2 hover:opacity-70"
+            >
               <Package className="h-3.5 w-3.5" />
               Track Order
             </Link>
@@ -89,7 +103,10 @@ export function Header({ cartCount = 0 }: HeaderProps) {
               <Separator className="my-6" />
 
               <div className="grid gap-3 text-sm">
-                <Link href="https://wa.me/6281234567890" className="flex items-center gap-2">
+                <Link
+                  href="https://wa.me/6281234567890"
+                  className="flex items-center gap-2"
+                >
                   <MessageCircle className="h-4 w-4" />
                   Order via WhatsApp
                 </Link>
@@ -101,7 +118,10 @@ export function Header({ cartCount = 0 }: HeaderProps) {
             </SheetContent>
           </Sheet>
 
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0">
+          <Link
+            href="/"
+            className="absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0"
+          >
             <BrandLogo />
           </Link>
 
@@ -118,12 +138,16 @@ export function Header({ cartCount = 0 }: HeaderProps) {
           </nav>
 
           <div className="flex items-center gap-1 md:gap-3">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setIsSearchOpen(!isSearchOpen)}
             >
-              {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+              {isSearchOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Search className="h-5 w-5" />
+              )}
               <span className="sr-only">Search</span>
             </Button>
 
@@ -139,19 +163,32 @@ export function Header({ cartCount = 0 }: HeaderProps) {
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/account/profile" className="cursor-pointer">Profile</Link>
+                    <Link href="/account/profile" className="cursor-pointer">
+                      Profile
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/account/orders" className="cursor-pointer">My Orders</Link>
+                    <Link href="/account/orders" className="cursor-pointer">
+                      My Orders
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/account/addresses" className="cursor-pointer">My Addresses</Link>
+                    <Link href="/account/addresses" className="cursor-pointer">
+                      My Addresses
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/account/wishlist" className="cursor-pointer">My Wishlist</Link>
+                    <Link href="/account/wishlist" className="cursor-pointer">
+                      My Wishlist
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/account/notifications" className="cursor-pointer">Notifications</Link>
+                    <Link
+                      href="/account/notifications"
+                      className="cursor-pointer"
+                    >
+                      Notifications
+                    </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -183,14 +220,18 @@ export function Header({ cartCount = 0 }: HeaderProps) {
         </div>
       )}
     </header>
-  )
+  );
 }
 
 function BrandLogo() {
   return (
     <div className="text-center lg:text-left">
-      <div className="text-xl font-bold uppercase tracking-[0.35em] md:text-2xl">Storefront</div>
-      <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.45em] text-zinc-500">Official Store</div>
+      <div className="text-xl font-bold uppercase tracking-[0.35em] md:text-2xl">
+        Storefront
+      </div>
+      <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.45em] text-zinc-500">
+        Official Store
+      </div>
     </div>
-  )
+  );
 }

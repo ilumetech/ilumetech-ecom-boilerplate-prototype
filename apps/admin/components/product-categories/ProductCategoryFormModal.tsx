@@ -74,7 +74,10 @@ export function ProductCategoryFormModal({
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
-  function buildOriginalValues(): Pick<FormValues, "name" | "description" | "isActive"> {
+  function buildOriginalValues(): Pick<
+    FormValues,
+    "name" | "description" | "isActive"
+  > {
     return {
       name: editTarget!.name,
       description: editTarget!.description ?? undefined,
@@ -85,7 +88,11 @@ export function ProductCategoryFormModal({
   function handleFinish(values: FormValues) {
     if (isEditMode) {
       const dirtyFields = getDirtyFields(
-        { name: values.name, description: values.description, isActive: values.isActive },
+        {
+          name: values.name,
+          description: values.description,
+          isActive: values.isActive,
+        },
         buildOriginalValues(),
       );
       if (Object.keys(dirtyFields).length === 0) {
@@ -135,7 +142,12 @@ export function ProductCategoryFormModal({
       mask={{ closable: false }}
       destroyOnHidden={true}
     >
-      <Form form={form} layout="vertical" onFinish={handleFinish} className="mt-4">
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleFinish}
+        className="mt-4"
+      >
         <Form.Item
           name="name"
           label={PRODUCT_CATEGORY_LABELS.name}
@@ -144,7 +156,10 @@ export function ProductCategoryFormModal({
           <Input />
         </Form.Item>
 
-        <Form.Item name="description" label={PRODUCT_CATEGORY_LABELS.description}>
+        <Form.Item
+          name="description"
+          label={PRODUCT_CATEGORY_LABELS.description}
+        >
           <Input.TextArea rows={3} />
         </Form.Item>
 

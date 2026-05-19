@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { App, Button, Input, Space, Table } from "antd";
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TableColumnsType, TablePaginationConfig } from "antd";
 import type { SorterResult } from "antd/es/table/interface";
@@ -27,7 +32,10 @@ export function ColorTable() {
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
   const [editTarget, setEditTarget] = useState<Color | null>(null);
-  const [queryParams, setQueryParams] = useState<ColorQueryParams>({ page: 1, limit: 10 });
+  const [queryParams, setQueryParams] = useState<ColorQueryParams>({
+    page: 1,
+    limit: 10,
+  });
 
   const detailColorId = searchParams.get("detail");
 
@@ -118,7 +126,11 @@ export function ColorTable() {
       <div className="flex justify-between mb-4">
         <Space>
           <Can permission="color:create">
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleOpenCreate}
+            >
               Tambah Warna
             </Button>
           </Can>
@@ -181,7 +193,10 @@ function mapSortOrder(
   return undefined;
 }
 
-function buildTableColumns({ onEdit, onDelete }: ColumnBuilderParams): TableColumnsType<Color> {
+function buildTableColumns({
+  onEdit,
+  onDelete,
+}: ColumnBuilderParams): TableColumnsType<Color> {
   return [
     {
       title: COLOR_LABELS.name,
@@ -191,14 +206,14 @@ function buildTableColumns({ onEdit, onDelete }: ColumnBuilderParams): TableColu
       render: (name: string, record: Color) => (
         <Space>
           {record.hexCode && (
-            <div 
-              style={{ 
-                width: 16, 
-                height: 16, 
-                borderRadius: 4, 
+            <div
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: 4,
                 backgroundColor: record.hexCode,
-                border: '1px solid #d9d9d9'
-              }} 
+                border: "1px solid #d9d9d9",
+              }}
             />
           )}
           {name}
@@ -211,7 +226,11 @@ function buildTableColumns({ onEdit, onDelete }: ColumnBuilderParams): TableColu
       render: (_: unknown, record: Color) => (
         <Space size="small" onClick={(e) => e.stopPropagation()}>
           <Can permission="color:update">
-            <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(record)}
+            />
           </Can>
           <Can permission="color:delete">
             <Button

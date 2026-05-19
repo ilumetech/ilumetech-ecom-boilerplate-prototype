@@ -19,8 +19,12 @@ interface UpdateColorPayload {
   hexCode?: string;
 }
 
-async function getAll(params?: ColorQueryParams): Promise<PaginatedResponse<Color>> {
-  const response = await apiClient.get<PaginatedResponse<Color>>("/colors", { params });
+async function getAll(
+  params?: ColorQueryParams,
+): Promise<PaginatedResponse<Color>> {
+  const response = await apiClient.get<PaginatedResponse<Color>>("/colors", {
+    params,
+  });
   return response.data;
 }
 
@@ -29,13 +33,21 @@ async function getById(id: string): Promise<Color> {
   return response.data.data;
 }
 
-async function create(payload: CreateColorPayload): Promise<ApiResponse<Color>> {
+async function create(
+  payload: CreateColorPayload,
+): Promise<ApiResponse<Color>> {
   const response = await apiClient.post<ApiResponse<Color>>("/colors", payload);
   return response.data;
 }
 
-async function update(id: string, payload: UpdateColorPayload): Promise<ApiResponse<Color>> {
-  const response = await apiClient.patch<ApiResponse<Color>>(`/colors/${id}`, payload);
+async function update(
+  id: string,
+  payload: UpdateColorPayload,
+): Promise<ApiResponse<Color>> {
+  const response = await apiClient.patch<ApiResponse<Color>>(
+    `/colors/${id}`,
+    payload,
+  );
   return response.data;
 }
 

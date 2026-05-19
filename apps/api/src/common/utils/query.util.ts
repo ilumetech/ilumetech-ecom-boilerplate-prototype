@@ -1,6 +1,10 @@
 import type { PaginationMeta } from '@ilumetech/types';
 
-export function buildPaginationMeta(total: number, page: number, limit: number): PaginationMeta {
+export function buildPaginationMeta(
+  total: number,
+  page: number,
+  limit: number,
+): PaginationMeta {
   return { total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
@@ -88,7 +92,8 @@ function buildOrderBy(
 ): Record<string, 'asc' | 'desc'> | undefined {
   if (!sortField) return undefined;
 
-  const isAllowed = allowedSortFields.length === 0 || allowedSortFields.includes(sortField);
+  const isAllowed =
+    allowedSortFields.length === 0 || allowedSortFields.includes(sortField);
   if (!isAllowed) return undefined;
 
   return { [sortField]: sortOrder };
