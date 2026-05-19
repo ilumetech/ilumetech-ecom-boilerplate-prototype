@@ -5,7 +5,7 @@ import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export default function UsersPage() {
   return (
-    <div className="p-6">
+    <div className="p-3 md:p-6">
       <div className="mb-6">
         <h1 className="text-xl font-semibold m-0">Manajemen Pengguna</h1>
         <p className="text-sm text-gray-500 mt-1">

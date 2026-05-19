@@ -33,12 +33,12 @@ export class WebhookService {
 
   private async routeEvent(event: WebhookEvent): Promise<void> {
     if (event.type === 'user.deleted') {
-      const data = event.data as UserDeletedJSON;
+      const data = event.data;
       if (data.id) await this.softDeleteUser(data.id);
       return;
     }
     if (event.type === 'user.created' || event.type === 'user.updated') {
-      await this.upsertUser(event.data as UserJSON);
+      await this.upsertUser(event.data);
     }
   }
 

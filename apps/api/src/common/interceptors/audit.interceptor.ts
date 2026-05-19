@@ -80,7 +80,7 @@ export class AuditInterceptor implements NestInterceptor {
         entityType: metadata.entityType,
         entityId: this.extractEntityId(responseBody, request.params),
         action,
-        category: metadata.category as AuditCategory,
+        category: metadata.category,
         diff:
           action !== 'DELETE'
             ? (request.body as Prisma.InputJsonValue)

@@ -30,6 +30,8 @@ export const PERMISSIONS = {
   },
   DASHBOARD: {
     VIEW_USER_STATS: "dashboard:view_user_stats",
+    VIEW_PRODUCT_STATS: "dashboard:view_product_stats",
+    VIEW_CATEGORY_STATS: "dashboard:view_category_stats",
   },
   COLOR: {
     CREATE: "color:create",

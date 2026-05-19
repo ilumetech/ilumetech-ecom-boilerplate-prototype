@@ -164,6 +164,7 @@ export function ProductCategoryTable() {
         columns={columns}
         loading={isLoading}
         onChange={handleTableChange}
+        scroll={{ x: "max-content" }}
         pagination={{
           total: data?.meta?.total,
           pageSize: queryParams.limit,

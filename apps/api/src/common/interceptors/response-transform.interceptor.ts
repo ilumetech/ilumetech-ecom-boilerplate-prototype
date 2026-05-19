@@ -29,8 +29,6 @@ export class ResponseTransformInterceptor<T> implements NestInterceptor<
   }
 
   private isAlreadyWrapped(data: unknown): boolean {
-    return (
-      data !== null && typeof data === 'object' && 'data' in (data as object)
-    );
+    return data !== null && typeof data === 'object' && 'data' in data;
   }
 }

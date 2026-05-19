@@ -1,6 +1,6 @@
 "use client";
 
-import { Layout, Menu, Typography, theme } from "antd";
+import { Layout, Menu, Typography, theme, Button, Drawer } from "antd";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { useState, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -14,6 +14,7 @@ import {
   TagsOutlined,
   TeamOutlined,
   BgColorsOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { PERMISSIONS } from "@ilumetech/types";
 
@@ -150,6 +151,7 @@ function getDefaultOpenKeys(
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useUser();
@@ -171,17 +173,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     router.push(key);
+    setMobileOpen(false);
   };
 
   const borderStyle = `1px solid ${token.colorBorderSecondary}`;
 
   return (
     <Layout className="min-h-screen">
+      {/* Desktop Sidebar */}
       <Sider
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
         theme="light"
+        className="hidden md:block!"
         style={{ borderRight: borderStyle }}
       >
         <div
@@ -205,11 +210,61 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           onClick={handleMenuClick}
         />
       </Sider>
+
+      {/* Mobile Drawer Navigation */}
+      <Drawer
+        title={
+          <Typography.Text
+            strong
+            style={{ color: token.colorPrimary, fontSize: token.fontSize }}
+          >
+            IlumeTech ERP
+          </Typography.Text>
+        }
+        placement="left"
+        onClose={() => setMobileOpen(false)}
+        open={mobileOpen}
+        styles={{
+          body: {
+            padding: 0,
+          },
+        }}
+        width={250}
+      >
+        <Menu
+          mode="inline"
+          items={menuItems}
+          selectedKeys={[selectedKey]}
+          defaultOpenKeys={defaultOpenKeys}
+          onClick={handleMenuClick}
+          style={{ borderRight: 0 }}
+        />
+      </Drawer>
+
       <Layout>
         <Header
-          className="flex items-center justify-end"
+          className="flex items-center justify-between"
           style={{ padding: "0 24px", borderBottom: borderStyle }}
         >
+          {/* Mobile hamburger menu & logo */}
+          <div className="flex items-center md:hidden gap-3">
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setMobileOpen(true)}
+              style={{ fontSize: "18px", width: 40, height: 40 }}
+            />
+            <Typography.Text
+              strong
+              style={{ color: token.colorPrimary, fontSize: token.fontSize }}
+            >
+              IlumeTech ERP
+            </Typography.Text>
+          </div>
+
+          {/* Desktop spacer to push profile to the right */}
+          <div className="hidden md:block" />
+
           <div className="flex items-center gap-3">
             <Typography.Text type="secondary">
               {user?.username ?? user?.firstName}
@@ -217,7 +272,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <UserButton />
           </div>
         </Header>
-        <Content className="m-6">{children}</Content>
+        <Content className="m-3 md:m-6">{children}</Content>
       </Layout>
     </Layout>
   );
