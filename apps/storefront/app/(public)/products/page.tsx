@@ -1,47 +1,43 @@
 import ProductGrid from "@/components/product/product-grid";
 import { Button } from "@/components/ui/button";
+import { getProducts } from "@/lib/api/product";
 import { Filter, ChevronDown } from "lucide-react";
 
-const products = [
-  {
-    id: 1,
-    name: "Air Max Pulse",
-    colorway: "Summit White/Light Bone",
-    price: "Rp2.399.000",
-  },
-  {
-    id: 2,
-    name: "Dunk Low Retro",
-    colorway: "Black/White",
-    price: "Rp1.549.000",
-  },
-  {
-    id: 3,
-    name: "Air Jordan 1 Low",
-    colorway: "Wolf Grey/White",
-    price: "Rp1.729.000",
-  },
-  {
-    id: 4,
-    name: "Zoom Fly 5",
-    colorway: "Electric Algae",
-    price: "Rp2.489.000",
-  },
-  {
-    id: 5,
-    name: "Air Force 1 '07",
-    colorway: "White/White",
-    price: "Rp1.549.000",
-  },
-  {
-    id: 6,
-    name: "Metcon 9",
-    colorway: "Deep Jungle",
-    price: "Rp2.099.000",
-  },
-];
+interface ProductsPageProps {
+  searchParams: Promise<{
+    productCategoryId?: string;
+    search?: string;
+    sort?: string;
+  }>;
+}
 
-export default function ProductsPage() {
+export default async function ProductsPage({
+  searchParams,
+}: ProductsPageProps) {
+  const params = await searchParams;
+  const sortField = params.sort === "price" ? "sellingPrice" : "createdAt";
+  const response = await getProducts({
+    limit: 24,
+    productCategoryId: params.productCategoryId,
+    search: params.search,
+    sortField,
+    sortOrder: sortField === "createdAt" ? "desc" : "asc",
+  });
+  const products = response.data;
+  const categories = [
+    ...new Set(products.map((product) => product.productCategory.name)),
+  ];
+  const colors = [
+    ...new Set(
+      products.flatMap(
+        (product) =>
+          product.options
+            ?.find((option) => option.name.toLowerCase() === "color")
+            ?.values.map((value) => value.value) ?? [],
+      ),
+    ),
+  ];
+
   return (
     <>
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:py-12">
@@ -89,13 +85,7 @@ export default function ProductsPage() {
             <div className="sticky top-24 space-y-8">
               <FilterGroup
                 title="Categories"
-                items={[
-                  "Sneakers",
-                  "Running",
-                  "Basketball",
-                  "Training & Gym",
-                  "Lifestyle",
-                ]}
+                items={categories.length > 0 ? categories : ["All Products"]}
               />
               <FilterGroup
                 title="Price"
@@ -107,7 +97,7 @@ export default function ProductsPage() {
               />
               <FilterGroup
                 title="Color"
-                items={["Black", "White", "Blue", "Red", "Grey"]}
+                items={colors.length > 0 ? colors : ["All Colors"]}
               />
             </div>
           </aside>

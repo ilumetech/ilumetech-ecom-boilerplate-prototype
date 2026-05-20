@@ -3,29 +3,39 @@
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { StorefrontProduct } from "@/lib/api/product";
+import { formatPrice } from "@/lib/utils/format-price";
 
 interface ProductCardProps {
-  product: {
-    id: number;
-    name: string;
-    colorway: string;
-    price: string;
-  };
+  product: StorefrontProduct;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const primaryImage = product.images?.[0];
+  const primaryVariant = product.variants?.find((variant) => variant.isActive);
+  const price = primaryVariant?.finalPrice ?? product.sellingPrice;
+  const colorway =
+    primaryVariant?.optionValues
+      .filter((optionValue) => optionValue.optionName.toLowerCase() === "color")
+      .map((optionValue) => optionValue.value)
+      .join(" / ") || product.productCategory.name;
+
   return (
     <Link
-      href={`/products/product-${product.id}`}
+      href={`/products/${product.slug}`}
       className="group relative flex flex-col border border-zinc-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
     >
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-zinc-100">
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-200/50 to-zinc-100 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-
-        {/* Placeholder styling to represent product image */}
-        <div className="absolute inset-0 flex items-center justify-center transition-transform duration-700 ease-out group-hover:scale-105">
-          <div className="h-32 w-48 -rotate-12 rounded-full bg-gradient-to-tr from-zinc-300 to-zinc-200 opacity-40 blur-2xl transition-all duration-500 group-hover:rotate-0 group-hover:scale-110 group-hover:opacity-70" />
-        </div>
+        {primaryImage ? (
+          <div
+            role="img"
+            aria-label={primaryImage.alt ?? product.name}
+            className="h-full w-full bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
+            style={{ backgroundImage: `url(${primaryImage.url})` }}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-200/50 to-zinc-100" />
+        )}
 
         {/* Wishlist Button */}
         <div className="absolute right-3 top-3 z-10 transition-transform duration-300 group-hover:-translate-y-1">
@@ -61,10 +71,10 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.name}
           </h3>
           <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-            {product.colorway}
+            {colorway}
           </p>
           <p className="mt-2 text-sm font-black tracking-tight text-zinc-900">
-            {product.price}
+            {formatPrice(price)}
           </p>
         </div>
 

@@ -1,16 +1,10 @@
 "use client";
 
 import { ProductCard } from "./product-card";
-
-interface Product {
-  id: number;
-  name: string;
-  colorway: string;
-  price: string;
-}
+import type { StorefrontProduct } from "@/lib/api/product";
 
 interface ProductGridProps {
-  products: Product[];
+  products: StorefrontProduct[];
 }
 
 export default function ProductGrid({ products }: ProductGridProps) {

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Award, Box, Headphones, Truck, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/product/product-card";
+import { getProducts } from "@/lib/api/product";
 
 const trustItems = [
   {
@@ -34,14 +35,13 @@ const categories = [
   { name: "Casual", href: "/products?category=casual" },
 ];
 
-const products = Array.from({ length: 4 }, (_, index) => ({
-  id: index + 1,
-  name: "Product Name",
-  colorway: "Colorway",
-  price: "Rp1.299.000",
-}));
+export default async function HomePage() {
+  const products = await getProducts({
+    limit: 4,
+    sortField: "createdAt",
+    sortOrder: "desc",
+  });
 
-export default function HomePage() {
   return (
     <>
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:px-6 lg:grid-cols-2 lg:items-center lg:py-16">
@@ -136,7 +136,7 @@ export default function HomePage() {
         <SectionHeader title="Best Seller" href="/products" />
 
         <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-2 lg:grid-cols-4">
-          {products.map((product) => (
+          {products.data.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

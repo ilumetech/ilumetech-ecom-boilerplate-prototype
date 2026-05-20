@@ -19,6 +19,8 @@ import type {
   UpdateProductDto,
 } from './dto';
 
+type PublicProduct = Omit<Product, 'purchasePrice'>;
+
 type ProductWithRelations = Prisma.ProductGetPayload<{
   include: {
     productCategory: true;
@@ -48,7 +50,11 @@ type ProductWithRelations = Prisma.ProductGetPayload<{
 const PRODUCT_INCLUDE = {
   productCategory: true,
   unit: true,
-  images: true,
+  images: {
+    orderBy: {
+      sortOrder: 'asc' as const,
+    },
+  },
   options: {
     include: {
       values: {
@@ -114,6 +120,41 @@ export class ProductService {
     };
   }
 
+  async findPublicAll(
+    query: QueryProductDto,
+  ): Promise<PaginatedResponse<PublicProduct>> {
+    const filters: Record<string, unknown> = { isActive: true };
+    if (query.productCategoryId)
+      filters.productCategoryId = query.productCategoryId;
+
+    const { skip, take, where, orderBy } = buildPrismaQuery({
+      search: query.search,
+      searchFields: ['name', 'code'],
+      filters,
+      sortField: query.sortField,
+      sortOrder: query.sortOrder,
+      allowedSortFields: ['name', 'code', 'sellingPrice', 'createdAt'],
+      page: query.page,
+      limit: query.limit,
+    });
+
+    const [products, total] = await Promise.all([
+      this.prisma.product.findMany({
+        skip,
+        take,
+        where,
+        orderBy,
+        include: PRODUCT_INCLUDE,
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return {
+      data: products.map((p) => this.mapToPublicResponse(p)),
+      meta: buildPaginationMeta(total, query.page ?? 1, query.limit ?? 10),
+    };
+  }
+
   async findOne(id: string): Promise<Product> {
     const product = await this.prisma.product.findUnique({
       where: { id },
@@ -123,6 +164,17 @@ export class ProductService {
     if (!product) throw new NotFoundException(`Product ${id} not found`);
 
     return this.mapToResponse(product);
+  }
+
+  async findPublicBySlug(slug: string): Promise<PublicProduct> {
+    const product = await this.prisma.product.findFirst({
+      where: { slug, isActive: true },
+      include: PRODUCT_INCLUDE,
+    });
+
+    if (!product) throw new NotFoundException(`Product ${slug} not found`);
+
+    return this.mapToPublicResponse(product);
   }
 
   async create(dto: CreateProductDto): Promise<Product> {
@@ -605,6 +657,31 @@ export class ProductService {
       })),
       createdAt: product.createdAt.toISOString(),
       updatedAt: product.updatedAt.toISOString(),
+    };
+  }
+
+  private mapToPublicResponse(product: ProductWithRelations): PublicProduct {
+    const productResponse = this.mapToResponse(product);
+
+    return {
+      id: productResponse.id,
+      code: productResponse.code,
+      name: productResponse.name,
+      slug: productResponse.slug,
+      description: productResponse.description,
+      badge: productResponse.badge,
+      productCategoryId: productResponse.productCategoryId,
+      productCategory: productResponse.productCategory,
+      unitId: productResponse.unitId,
+      unit: productResponse.unit,
+      sellingPrice: productResponse.sellingPrice,
+      weightGram: productResponse.weightGram,
+      isActive: productResponse.isActive,
+      images: productResponse.images,
+      options: productResponse.options,
+      variants: productResponse.variants,
+      createdAt: productResponse.createdAt,
+      updatedAt: productResponse.updatedAt,
     };
   }
 }

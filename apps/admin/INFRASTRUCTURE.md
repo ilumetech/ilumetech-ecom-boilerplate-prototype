@@ -22,14 +22,14 @@ This document explains every piece of the frontend foundation: what each file do
 
 ## 1. Tech Stack Summary
 
-| Layer | Library | Purpose |
-|---|---|---|
-| Framework | Next.js 16 (App Router) | Pages, routing, SSR |
-| Auth | Clerk (`@clerk/nextjs`) | Login, session, JWT, RBAC |
-| UI Components | Ant Design (`antd`) | Tables, forms, modals, layout |
-| Layout Utilities | Tailwind CSS v4 | Spacing, flex/grid, sizing |
-| Server State | TanStack Query | Data fetching, caching, mutations |
-| HTTP Client | Axios | API requests with interceptors |
+| Layer            | Library                 | Purpose                           |
+| ---------------- | ----------------------- | --------------------------------- |
+| Framework        | Next.js 16 (App Router) | Pages, routing, SSR               |
+| Auth             | Clerk (`@clerk/nextjs`) | Login, session, JWT, RBAC         |
+| UI Components    | Ant Design (`antd`)     | Tables, forms, modals, layout     |
+| Layout Utilities | Tailwind CSS v4         | Spacing, flex/grid, sizing        |
+| Server State     | TanStack Query          | Data fetching, caching, mutations |
+| HTTP Client      | Axios                   | API requests with interceptors    |
 
 ---
 
@@ -117,11 +117,11 @@ middleware.ts                ← runs before any page renders
 **`middleware.ts`** — The gatekeeper. Runs on every request at the edge (before the server renders anything).
 
 ```typescript
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)']);
+const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
-  if (isPublicRoute(request)) return;  // let sign-in/sign-up through
-  await auth.protect();                 // everything else requires auth
+  if (isPublicRoute(request)) return; // let sign-in/sign-up through
+  await auth.protect(); // everything else requires auth
 });
 ```
 
@@ -134,15 +134,15 @@ If `auth.protect()` finds no valid session, it redirects the user to `/sign-in` 
 ### Using auth state in components
 
 ```typescript
-'use client';
-import { useAuth, useUser } from '@clerk/nextjs';
+"use client";
+import { useAuth, useUser } from "@clerk/nextjs";
 
 // Get the current user
 const { user } = useUser();
 
 // Check a permission
 const { has } = useAuth();
-const canEditProducts = has({ permission: 'org:products:edit' });
+const canEditProducts = has({ permission: "org:products:edit" });
 
 // Conditionally show UI
 if (!canEditProducts) return null;
@@ -193,13 +193,14 @@ Create a file per domain in `lib/api/`:
 
 ```typescript
 // lib/api/product.ts
-import { apiClient } from './client';
+import { apiClient } from "./client";
 
 export const productApi = {
-  getAll: (params: QueryDto) => apiClient.get('/products', { params }),
+  getAll: (params: QueryDto) => apiClient.get("/products", { params }),
   getById: (id: string) => apiClient.get(`/products/${id}`),
-  create: (body: CreateProductDto) => apiClient.post('/products', body),
-  update: (id: string, body: UpdateProductDto) => apiClient.patch(`/products/${id}`, body),
+  create: (body: CreateProductDto) => apiClient.post("/products", body),
+  update: (id: string, body: UpdateProductDto) =>
+    apiClient.patch(`/products/${id}`, body),
   delete: (id: string) => apiClient.delete(`/products/${id}`),
 };
 ```
@@ -218,8 +219,8 @@ TanStack Query manages all server data: fetching, caching, background refetching
 
 ```typescript
 // Default config applied to all queries:
-staleTime: 60 * 1000  // data is "fresh" for 60 seconds — no refetch during this window
-retry: 1              // retry failed requests once before showing an error
+staleTime: 60 * 1000; // data is "fresh" for 60 seconds — no refetch during this window
+retry: 1; // retry failed requests once before showing an error
 ```
 
 **`components/providers/query-provider.tsx`** — A client component that creates the QueryClient once (via `useState`) and provides it to the entire component tree. Using `useState` ensures the client is created only once per mount, not on every re-render.
@@ -227,13 +228,13 @@ retry: 1              // retry failed requests once before showing an error
 ### Using TanStack Query in a component
 
 ```typescript
-'use client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { productApi } from '@/lib/api/product';
+"use client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { productApi } from "@/lib/api/product";
 
 // Fetching data
 const { data, isLoading } = useQuery({
-  queryKey: ['products', 'list', filters],  // cache key — must be unique per request shape
+  queryKey: ["products", "list", filters], // cache key — must be unique per request shape
   queryFn: () => productApi.getAll(filters),
 });
 
@@ -243,7 +244,7 @@ const mutation = useMutation({
   mutationFn: (body) => productApi.create(body),
   onSuccess: () => {
     // Invalidate the list cache so it refetches after a create
-    queryClient.invalidateQueries({ queryKey: ['products', 'list'] });
+    queryClient.invalidateQueries({ queryKey: ["products", "list"] });
   },
 });
 ```
@@ -254,11 +255,11 @@ const mutation = useMutation({
 
 ### Division of responsibility
 
-| Use case | Use |
-|---|---|
-| UI components (tables, forms, buttons, modals) | Ant Design |
-| Layout, spacing, flex/grid | Tailwind CSS |
-| Theme tokens (colors, border radius) | Antd ConfigProvider |
+| Use case                                       | Use                 |
+| ---------------------------------------------- | ------------------- |
+| UI components (tables, forms, buttons, modals) | Ant Design          |
+| Layout, spacing, flex/grid                     | Tailwind CSS        |
+| Theme tokens (colors, border radius)           | Antd ConfigProvider |
 
 Never use Tailwind to override Antd component styles. Never use Antd for layout structure.
 
@@ -273,8 +274,8 @@ The global theme is set in `app/layout.tsx` via `ConfigProvider`:
 ```typescript
 const antdTheme = {
   token: {
-    colorPrimary: '#1677ff',  // blue — used by buttons, links, active states
-    borderRadius: 6,           // applied to all Antd components globally
+    colorPrimary: "#1677ff", // blue — used by buttons, links, active states
+    borderRadius: 6, // applied to all Antd components globally
   },
 };
 ```
@@ -362,15 +363,15 @@ Copy `.env.example` to `.env.local` and fill in the values before running the ap
 cp .env.example .env.local
 ```
 
-| Variable | Where to get it | Purpose |
-|---|---|---|
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk dashboard → API Keys | Identifies your Clerk app (safe to expose) |
-| `CLERK_SECRET_KEY` | Clerk dashboard → API Keys | Server-side Clerk operations (keep secret) |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Set to `/sign-in` | Clerk's redirect target for unauthenticated users |
-| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Set to `/sign-up` | Clerk's sign-up URL (redirects to sign-in) |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | Set to `/dashboard` | Where Clerk sends users after login |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | Set to `/dashboard` | Where Clerk sends users after signup |
-| `NEXT_PUBLIC_API_URL` | Your NestJS API URL | Base URL for all axios requests |
+| Variable                              | Where to get it            | Purpose                                           |
+| ------------------------------------- | -------------------------- | ------------------------------------------------- |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   | Clerk dashboard → API Keys | Identifies your Clerk app (safe to expose)        |
+| `CLERK_SECRET_KEY`                    | Clerk dashboard → API Keys | Server-side Clerk operations (keep secret)        |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL`       | Set to `/sign-in`          | Clerk's redirect target for unauthenticated users |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL`       | Set to `/sign-up`          | Clerk's sign-up URL (redirects to sign-in)        |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | Set to `/dashboard`        | Where Clerk sends users after login               |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | Set to `/dashboard`        | Where Clerk sends users after signup              |
+| `NEXT_PUBLIC_API_URL`                 | Your NestJS API URL        | Base URL for all axios requests                   |
 
 Variables prefixed with `NEXT_PUBLIC_` are embedded in the browser bundle. Variables without this prefix (`CLERK_SECRET_KEY`) stay on the server only.
 
