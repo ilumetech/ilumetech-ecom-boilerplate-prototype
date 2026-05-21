@@ -1214,25 +1214,15 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       const presets = VALUE_PRESETS[optionName] || [];
       list = presets.map((p) => ({ label: p, value: p }));
 
-      // Ensure currently selected values are included so they can be marked disabled if saved
       const currentValues =
         form.getFieldValue(["options", index, "values"]) || [];
       if (Array.isArray(currentValues)) {
         currentValues.forEach((cv: any) => {
           if (cv && cv.value && !list.some((item) => item.value === cv.value)) {
-            list.push({
-              label: cv.label,
-              value: cv.value,
-            });
+            list.push({ label: cv.label, value: cv.value });
           }
         });
       }
-
-      list = list.map((item) => ({
-        ...item,
-        disabled:
-          savedIds.has(item.value) || savedNames.has(item.label.toLowerCase()),
-      }));
     }
 
     if (
