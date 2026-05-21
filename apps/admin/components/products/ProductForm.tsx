@@ -1673,7 +1673,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                         title: "Terapkan Diskon Produk",
                         content: (
                           <Space
-                            direction="vertical"
+                            orientation="vertical"
                             className="w-full pt-2"
                             size="middle"
                           >
@@ -2474,7 +2474,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                                 title: "Terapkan Diskon Otomatis",
                                 content: (
                                   <Space
-                                    direction="vertical"
+                                    orientation="vertical"
                                     className="w-full pt-2"
                                     size="middle"
                                   >
