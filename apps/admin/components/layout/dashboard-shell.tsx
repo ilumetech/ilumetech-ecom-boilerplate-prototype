@@ -225,11 +225,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         onClose={() => setMobileOpen(false)}
         open={mobileOpen}
         styles={{
-          body: {
-            padding: 0,
-          },
+          body: { padding: 0 },
+          wrapper: { width: 250 },
         }}
-        width={250}
       >
         <Menu
           mode="inline"
