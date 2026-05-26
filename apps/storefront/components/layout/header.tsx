@@ -30,6 +30,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { useCart } from "@/lib/hooks/use-cart";
+
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -44,8 +46,9 @@ type HeaderProps = {
   cartCount?: number;
 };
 
-export function Header({ cartCount = 0 }: HeaderProps) {
+export function Header(_props: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { cartCount: dynamicCartCount, isLoaded } = useCart();
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white">
@@ -198,7 +201,7 @@ export function Header({ cartCount = 0 }: HeaderProps) {
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingBag className="h-5 w-5" />
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[10px] text-white">
-                  {cartCount}
+                  {isLoaded ? dynamicCartCount : 0}
                 </span>
                 <span className="sr-only">Cart</span>
               </Button>

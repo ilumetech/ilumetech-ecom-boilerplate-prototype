@@ -1,4 +1,5 @@
-// app/cart/page.tsx
+"use client";
+
 import Link from "next/link";
 import {
   Minus,
@@ -8,138 +9,189 @@ import {
   ArrowLeft,
   ShieldCheck,
   Truck,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
+import { useCart } from "@/lib/hooks/use-cart";
+import type { CartItem as CartItemType } from "@/lib/providers/cart-provider";
 
-const cartItems = [
-  {
-    id: 1,
-    name: "Product Name",
-    colorway: "Black / White",
-    size: "42",
-    price: 1299000,
-    quantity: 1,
-  },
-  {
-    id: 2,
-    name: "Product Name",
-    colorway: "Grey",
-    size: "40",
-    price: 999000,
-    quantity: 1,
-  },
-];
-
-const subtotal = cartItems.reduce(
-  (total, item) => total + item.price * item.quantity,
-  0,
-);
-const shipping = 0;
-const total = subtotal + shipping;
 
 export default function CartPage() {
-  return (
-    <>
-      <section className="mx-auto max-w-7xl px-4 py-6 md:px-6 lg:py-10">
-        <div className="mb-8 flex items-center justify-between gap-4">
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
-              <Link href="/" className="hover:text-black">
-                Home
-              </Link>
-              <span>/</span>
-              <span className="text-black">Cart</span>
-            </div>
-            <h1 className="text-3xl font-black uppercase tracking-tight md:text-5xl">
-              Shopping Cart
-            </h1>
-          </div>
+  const {
+    items: cartItems,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    isLoaded,
+    cartCount,
+  } = useCart();
 
-          <Button
-            asChild
-            variant="outline"
-            className="hidden rounded-none border-black text-xs font-semibold uppercase tracking-wide hover:bg-black hover:text-white sm:inline-flex"
-          >
-            <Link href="/products">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Continue Shopping
-            </Link>
-          </Button>
-        </div>
-
-        <div className="grid gap-10 lg:grid-cols-[1fr_380px] lg:items-start">
-          <div>
-            <div className="hidden border-b border-zinc-200 pb-4 text-xs font-bold uppercase tracking-wide text-zinc-500 md:grid md:grid-cols-[1fr_120px_120px_120px_40px] md:gap-4">
-              <span>Product</span>
-              <span className="text-center">Price</span>
-              <span className="text-center">Quantity</span>
-              <span className="text-right">Total</span>
-              <span />
-            </div>
-
-            <div className="divide-y divide-zinc-200">
-              {cartItems.map((item) => (
-                <CartItem key={item.id} item={item} />
-              ))}
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Button
-                asChild
-                variant="outline"
-                className="rounded-none border-black text-xs font-semibold uppercase tracking-wide hover:bg-black hover:text-white sm:hidden"
-              >
-                <Link href="/products">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Continue Shopping
-                </Link>
-              </Button>
-
-              <Button
-                variant="ghost"
-                className="w-fit rounded-none px-0 text-xs font-semibold uppercase tracking-wide text-zinc-500 hover:bg-transparent hover:text-black"
-              >
-                Clear Cart
-              </Button>
-            </div>
-          </div>
-
-          <OrderSummary />
+  if (!isLoaded) {
+    return (
+      <section className="mx-auto max-w-7xl px-4 py-16 md:px-6 lg:py-24 text-center">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-zinc-200 border-t-black" />
+          <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">
+            Loading your cart...
+          </p>
         </div>
       </section>
-    </>
+    );
+  }
+
+  if (cartItems.length === 0) {
+    return (
+      <section className="mx-auto max-w-7xl px-4 py-16 md:px-6 lg:py-24 text-center">
+        <ShoppingBag className="mx-auto h-16 w-16 text-zinc-300 stroke-[1.2] mb-6" />
+        <h1 className="text-2xl font-black uppercase tracking-tight md:text-3xl">
+          Your Cart is Empty
+        </h1>
+        <p className="mt-3 text-sm text-zinc-500 max-w-md mx-auto leading-relaxed">
+          Looks like you haven&apos;t added anything to your cart yet. Explore our latest products and find something you like!
+        </p>
+        <Button
+          asChild
+          className="mt-8 rounded-none bg-black px-8 py-6 text-xs font-semibold uppercase tracking-wide text-white hover:bg-zinc-800"
+        >
+          <Link href="/products">
+            Start Shopping
+          </Link>
+        </Button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-6 md:px-6 lg:py-10">
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div>
+          <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+            <Link href="/" className="hover:text-black">
+              Home
+            </Link>
+            <span>/</span>
+            <span className="text-black">Cart</span>
+          </div>
+          <h1 className="text-3xl font-black uppercase tracking-tight md:text-5xl">
+            Shopping Cart ({cartCount})
+          </h1>
+        </div>
+
+        <Button
+          asChild
+          variant="outline"
+          className="hidden rounded-none border-black text-xs font-semibold uppercase tracking-wide hover:bg-black hover:text-white sm:inline-flex"
+        >
+          <Link href="/products">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Continue Shopping
+          </Link>
+        </Button>
+      </div>
+
+      <div className="grid gap-10 lg:grid-cols-[1fr_380px] lg:items-start">
+        <div>
+          <div className="hidden border-b border-zinc-200 pb-4 text-xs font-bold uppercase tracking-wide text-zinc-500 md:grid md:grid-cols-[1fr_120px_120px_120px_40px] md:gap-4">
+            <span>Product</span>
+            <span className="text-center">Price</span>
+            <span className="text-center">Quantity</span>
+            <span className="text-right">Total</span>
+            <span />
+          </div>
+
+          <div className="divide-y divide-zinc-200">
+            {cartItems.map((item) => (
+              <CartItem
+                key={item.id}
+                item={item}
+                onUpdateQuantity={(qty) => updateQuantity(item.id, qty)}
+                onRemove={() => removeItem(item.id)}
+              />
+            ))}
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              asChild
+              variant="outline"
+              className="rounded-none border-black text-xs font-semibold uppercase tracking-wide hover:bg-black hover:text-white sm:hidden"
+            >
+              <Link href="/products">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Continue Shopping
+              </Link>
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={clearCart}
+              className="w-fit rounded-none px-0 text-xs font-semibold uppercase tracking-wide text-zinc-500 hover:bg-transparent hover:text-red-600"
+            >
+              Clear Cart
+            </Button>
+          </div>
+        </div>
+
+        <OrderSummary />
+      </div>
+    </section>
   );
 }
 
 function CartItem({
   item,
+  onUpdateQuantity,
+  onRemove,
 }: {
   item: {
+    id: string;
     name: string;
     colorway: string;
     size: string;
     price: number;
     quantity: number;
+    slug: string;
+    imageUrl?: string;
   };
+  onUpdateQuantity: (quantity: number) => void;
+  onRemove: () => void;
 }) {
   return (
     <div className="grid gap-4 py-6 md:grid-cols-[1fr_120px_120px_120px_40px] md:items-center md:gap-4">
       <div className="flex gap-4">
-        <div className="h-24 w-24 shrink-0 rounded-md bg-gradient-to-br from-zinc-100 to-zinc-200 md:h-28 md:w-28" />
+        {item.imageUrl ? (
+          <div
+            role="img"
+            aria-label={item.name}
+            className="h-24 w-24 shrink-0 rounded-md bg-cover bg-center md:h-28 md:w-28 bg-zinc-100"
+            style={{ backgroundImage: `url(${item.imageUrl})` }}
+          />
+        ) : (
+          <div className="h-24 w-24 shrink-0 rounded-md bg-gradient-to-br from-zinc-100 to-zinc-200 md:h-28 md:w-28" />
+        )}
 
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-bold uppercase tracking-wide md:text-base">
-            {item.name}
-          </h2>
+          <Link href={`/products/${item.slug}`} className="hover:underline">
+            <h2 className="text-sm font-bold uppercase tracking-wide md:text-base">
+              {item.name}
+            </h2>
+          </Link>
           <p className="mt-1 text-sm text-zinc-500">{item.colorway}</p>
           <p className="mt-1 text-sm text-zinc-500">Size: {item.size}</p>
 
           <div className="mt-3 flex items-center gap-3 md:hidden">
-            <QuantityControl quantity={item.quantity} />
-            <button className="text-zinc-500 hover:text-black">
+            <QuantityControl
+              quantity={item.quantity}
+              onIncrease={() => onUpdateQuantity(item.quantity + 1)}
+              onDecrease={() => onUpdateQuantity(item.quantity - 1)}
+            />
+            <button
+              onClick={onRemove}
+              className="text-zinc-500 hover:text-black"
+            >
               <Trash2 className="h-4 w-4" />
               <span className="sr-only">Remove item</span>
             </button>
@@ -152,7 +204,11 @@ function CartItem({
       </p>
 
       <div className="hidden justify-center md:flex">
-        <QuantityControl quantity={item.quantity} />
+        <QuantityControl
+          quantity={item.quantity}
+          onIncrease={() => onUpdateQuantity(item.quantity + 1)}
+          onDecrease={() => onUpdateQuantity(item.quantity - 1)}
+        />
       </div>
 
       <div className="flex items-center justify-between md:block md:text-right">
@@ -164,7 +220,10 @@ function CartItem({
         </p>
       </div>
 
-      <button className="hidden text-zinc-500 hover:text-black md:block">
+      <button
+        onClick={onRemove}
+        className="hidden text-zinc-500 hover:text-black md:block"
+      >
         <Trash2 className="h-4 w-4" />
         <span className="sr-only">Remove item</span>
       </button>
@@ -172,15 +231,29 @@ function CartItem({
   );
 }
 
-function QuantityControl({ quantity }: { quantity: number }) {
+function QuantityControl({
+  quantity,
+  onIncrease,
+  onDecrease,
+}: {
+  quantity: number;
+  onIncrease: () => void;
+  onDecrease: () => void;
+}) {
   return (
     <div className="flex h-10 w-32 items-center justify-between border border-zinc-300">
-      <button className="flex h-full w-10 items-center justify-center hover:bg-zinc-100">
+      <button
+        onClick={onDecrease}
+        className="flex h-full w-10 items-center justify-center hover:bg-zinc-100"
+      >
         <Minus className="h-4 w-4" />
         <span className="sr-only">Decrease quantity</span>
       </button>
       <span className="text-sm font-semibold">{quantity}</span>
-      <button className="flex h-full w-10 items-center justify-center hover:bg-zinc-100">
+      <button
+        onClick={onIncrease}
+        className="flex h-full w-10 items-center justify-center hover:bg-zinc-100"
+      >
         <Plus className="h-4 w-4" />
         <span className="sr-only">Increase quantity</span>
       </button>
@@ -189,6 +262,17 @@ function QuantityControl({ quantity }: { quantity: number }) {
 }
 
 function OrderSummary() {
+  const { items: cartItems } = useCart();
+
+  const subtotal = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0,
+  );
+  const shipping = 0;
+  const total = subtotal + shipping;
+
+  const whatsappMessage = buildWhatsappMessage(cartItems, total);
+
   return (
     <Card className="sticky top-36 rounded-none border-zinc-200 shadow-none">
       <CardContent className="p-5 md:p-6">
@@ -249,11 +333,14 @@ function OrderSummary() {
           </Button>
 
           <Button
+            asChild
             variant="outline"
             className="h-12 w-full rounded-none border-zinc-300 text-xs font-semibold uppercase tracking-wide hover:border-black"
           >
-            <MessageCircle className="mr-2 h-4 w-4" />
-            Checkout via WhatsApp
+            <Link href={`https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`}>
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Checkout via WhatsApp
+            </Link>
           </Button>
         </div>
 
@@ -294,6 +381,17 @@ function SummaryBenefit({
       </div>
     </div>
   );
+}
+
+function buildWhatsappMessage(items: CartItemType[], total: number): string {
+  const itemSummary = items
+    .map(
+      (item) =>
+        `- ${item.name} (${item.colorway}, Size ${item.size}) x${item.quantity}: ${formatPrice(item.price * item.quantity)}`,
+    )
+    .join("\n");
+
+  return `Hi, I would like to order the following items:\n\n${itemSummary}\n\n*Total Order*: ${formatPrice(total)}\n\nPlease assist me with the checkout process. Thank you!`;
 }
 
 function formatPrice(value: number) {

@@ -2,11 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MessageCircle, Minus, Plus } from "lucide-react";
 import type { ProductVariant } from "@ilumetech/types";
 import { Button } from "@/components/ui/button";
 import type { StorefrontProduct } from "@/lib/api/product";
 import { formatPrice } from "@/lib/utils/format-price";
+import { useCart } from "@/lib/hooks/use-cart";
+
 
 interface ProductPurchasePanelProps {
   product: StorefrontProduct;
@@ -15,6 +18,9 @@ interface ProductPurchasePanelProps {
 type SelectedOptions = Record<string, string>;
 
 export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
+  const { addItem } = useCart();
+  const router = useRouter();
+
   const activeVariants = useMemo(
     () => product.variants?.filter((variant) => variant.isActive) ?? [],
     [product.variants],
@@ -39,6 +45,46 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     selectedOptions,
     selectedVariant: displayVariant,
   });
+
+  const colorway = Object.entries(selectedOptions)
+    .filter(([key]) => key.toLowerCase() === "color")
+    .map(([, value]) => value)
+    .join(" / ") || product.productCategory.name;
+
+  const size = Object.entries(selectedOptions)
+    .filter(([key]) => key.toLowerCase() === "size")
+    .map(([, value]) => value)
+    .join(", ") || "One Size";
+
+  const handleAddToCart = () => {
+    addItem({
+      productId: product.id,
+      variantId: displayVariant?.id,
+      name: product.name,
+      slug: product.slug,
+      colorway,
+      size,
+      price,
+      quantity,
+      imageUrl: displayVariant?.imageUrl || product.images?.[0]?.url,
+    });
+    router.push("/cart");
+  };
+
+  const handleBuyNow = () => {
+    addItem({
+      productId: product.id,
+      variantId: displayVariant?.id,
+      name: product.name,
+      slug: product.slug,
+      colorway,
+      size,
+      price,
+      quantity,
+      imageUrl: displayVariant?.imageUrl || product.images?.[0]?.url,
+    });
+    router.push("/checkout");
+  };
 
   function handleOptionChange(optionName: string, value: string) {
     setSelectedOptions((current) => ({ ...current, [optionName]: value }));
@@ -143,6 +189,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         <Button
           type="button"
           disabled={hasUnavailableSelection}
+          onClick={handleAddToCart}
           className="h-12 rounded-none bg-black text-xs font-semibold uppercase text-white hover:bg-zinc-800 disabled:bg-zinc-300"
         >
           Add to Cart
@@ -150,6 +197,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         <Button
           type="button"
           disabled={hasUnavailableSelection}
+          onClick={handleBuyNow}
           variant="outline"
           className="h-12 rounded-none border-black text-xs font-semibold uppercase hover:bg-black hover:text-white"
         >
