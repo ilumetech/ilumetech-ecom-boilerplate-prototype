@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/lib/hooks/use-cart";
+import CartDrawer from "@/components/cart/cart-drawer";
 
 
 const navItems = [
@@ -198,15 +199,20 @@ export function Header(_props: HeaderProps) {
               </DropdownMenu>
             </div>
 
-            <Link href="/cart">
-              <Button variant="ghost" size="icon" className="relative">
-                <ShoppingBag className="h-5 w-5" />
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[10px] text-white">
-                  {isLoaded ? dynamicCartCount : 0}
-                </span>
-                <span className="sr-only">Cart</span>
-              </Button>
-            </Link>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <ShoppingBag className="h-5 w-5" />
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[10px] text-white">
+                    {isLoaded ? dynamicCartCount : 0}
+                  </span>
+                  <span className="sr-only">Cart</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
+                <CartDrawer />
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>
