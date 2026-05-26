@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { ArrowLeft, ChevronRight, Lock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,34 +18,90 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const cartItems = [
-  {
-    id: 1,
-    name: "Product Name",
-    colorway: "Black / White",
-    size: "42",
-    price: 1299000,
-    quantity: 1,
-  },
-  {
-    id: 2,
-    name: "Product Name",
-    colorway: "Grey",
-    size: "40",
-    price: 999000,
-    quantity: 1,
-  },
-];
-
-const subtotal = cartItems.reduce(
-  (total, item) => total + item.price * item.quantity,
-  0,
-);
-const shipping = 50000;
-const total = subtotal + shipping;
+import { useCart } from "@/lib/hooks/use-cart";
 
 export default function CheckoutPage() {
+  const { items: cartItems, clearCart, isLoaded } = useCart();
+  const router = useRouter();
+  const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
+
+  const subtotal = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0,
+  );
+  const shipping = shippingMethod === "standard" ? 50000 : 100000;
+  const total = subtotal + shipping;
+
+  const handlePayNow = () => {
+    clearCart();
+    router.push("/success");
+  };
+
+  if (!isLoaded) {
+    return (
+      <main className="min-h-screen bg-zinc-50 text-black flex flex-col">
+        <header className="border-b border-zinc-200 bg-white">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
+            <Link
+              href="/"
+              className="text-xl font-black uppercase tracking-tighter"
+            >
+              Brand<span className="text-zinc-500">Name</span>
+            </Link>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              <Lock className="h-4 w-4" />
+              <span>Secure Checkout</span>
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-24">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-zinc-200 border-t-black" />
+          <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">
+            Loading checkout...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (cartItems.length === 0) {
+    return (
+      <main className="min-h-screen bg-zinc-50 text-black flex flex-col">
+        <header className="border-b border-zinc-200 bg-white">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
+            <Link
+              href="/"
+              className="text-xl font-black uppercase tracking-tighter"
+            >
+              Brand<span className="text-zinc-500">Name</span>
+            </Link>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              <Lock className="h-4 w-4" />
+              <span>Secure Checkout</span>
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center py-24 text-center px-4">
+          <CheckCircle2 className="mx-auto h-16 w-16 text-zinc-300 stroke-[1.2] mb-6" />
+          <h1 className="text-2xl font-black uppercase tracking-tight md:text-3xl">
+            Your Checkout is Empty
+          </h1>
+          <p className="mt-3 text-sm text-zinc-500 max-w-md mx-auto leading-relaxed">
+            There are no items in your cart to checkout.
+          </p>
+          <Button
+            asChild
+            className="mt-8 rounded-none bg-black px-8 py-6 text-xs font-semibold uppercase tracking-wide text-white hover:bg-zinc-800"
+          >
+            <Link href="/products">
+              Browse Products
+            </Link>
+          </Button>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-zinc-50 text-black">
       {/* Checkout Header */}
@@ -249,7 +309,11 @@ export default function CheckoutPage() {
               <h2 className="text-xl font-black uppercase tracking-tight">
                 Shipping Method
               </h2>
-              <RadioGroup defaultValue="standard" className="grid gap-3">
+              <RadioGroup
+                value={shippingMethod}
+                onValueChange={(val) => setShippingMethod(val as "standard" | "express")}
+                className="grid gap-3"
+              >
                 <Card className="rounded-none border-zinc-300 shadow-none [&:has([data-state=checked])]:border-black [&:has([data-state=checked])]:bg-zinc-50">
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -393,10 +457,11 @@ export default function CheckoutPage() {
                 Return to cart
               </Link>
               <Button
-                asChild
+                type="button"
+                onClick={handlePayNow}
                 className="h-14 rounded-none bg-black px-8 text-sm font-bold uppercase tracking-widest text-white hover:bg-zinc-800"
               >
-                <Link href="/success">Pay Now</Link>
+                Pay Now
               </Button>
             </div>
           </div>
@@ -410,13 +475,27 @@ export default function CheckoutPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="p-6 divide-y divide-zinc-100">
+                <div className="p-6 divide-y divide-zinc-100 max-h-[350px] overflow-y-auto scrollbar-thin">
                   {cartItems.map((item) => (
                     <div
                       key={item.id}
                       className="py-4 first:pt-0 last:pb-0 flex items-center gap-4"
                     >
                       <div className="relative h-16 w-16 shrink-0 bg-zinc-100 border border-zinc-200">
+                        <div className="h-full w-full overflow-hidden">
+                          {item.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-[8px] font-black text-zinc-300 uppercase rotate-12">
+                              Product
+                            </div>
+                          )}
+                        </div>
                         <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-500 text-[10px] font-bold text-white">
                           {item.quantity}
                         </span>
