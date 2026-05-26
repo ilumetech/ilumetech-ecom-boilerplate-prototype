@@ -91,7 +91,7 @@ export default function SuccessPage() {
             Your order is confirmed
           </h1>
           <p className="text-zinc-500 text-lg max-w-md mx-auto">
-            Thank you for shopping with us. We've sent a confirmation email to{" "}
+            Thank you for shopping with us. We&apos;ve sent a confirmation email to{" "}
             <span className="text-black font-bold">{orderDetails.email}</span>{" "}
             with your order details.
           </p>

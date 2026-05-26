@@ -1,3 +1,4 @@
+import Link from "next/link";
 import ProductGrid from "@/components/product/product-grid";
 import { Button } from "@/components/ui/button";
 import { getProducts } from "@/lib/api/product";
@@ -45,9 +46,9 @@ export default async function ProductsPage({
         <div className="mb-8 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
             <nav className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-              <a href="/" className="hover:text-black transition-colors">
+              <Link href="/" className="hover:text-black transition-colors">
                 Home
-              </a>
+              </Link>
               <span>/</span>
               <span className="text-black">All Products</span>
             </nav>

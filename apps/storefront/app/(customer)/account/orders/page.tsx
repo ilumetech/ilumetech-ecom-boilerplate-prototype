@@ -262,7 +262,7 @@ export default function OrdersPage() {
             No orders found
           </h3>
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 max-w-xs mb-8">
-            Start shopping to find something you'll love.
+            Start shopping to find something you&apos;ll love.
           </p>
           <Button
             asChild

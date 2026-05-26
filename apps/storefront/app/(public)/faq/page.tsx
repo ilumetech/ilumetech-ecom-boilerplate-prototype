@@ -84,7 +84,7 @@ export default function FAQPage() {
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-zinc-700">
             Find answers to common questions about our products, shipping,
-            returns, and more. If you can't find what you're looking for, our
+            returns, and more. If you can&apos;t find what you&apos;re looking for, our
             team is always ready to help.
           </p>
         </div>
@@ -116,10 +116,10 @@ export default function FAQPage() {
             Still Have Questions?
           </p>
           <h3 className="mt-4 text-2xl font-black uppercase tracking-tight md:text-3xl">
-            We're Here to Help
+            We&apos;re Here to Help
           </h3>
           <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-zinc-600">
-            Can't find the answer you're looking for? Reach out to our customer
+            Can&apos;t find the answer you&apos;re looking for? Reach out to our customer
             support team directly.
           </p>
           <div className="mt-8 flex justify-center">

@@ -30,7 +30,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
           No items found
         </h3>
         <p className="mt-2 max-w-[280px] text-sm leading-6 text-zinc-500">
-          We couldn't find any products matching your current selection. Try
+          We couldn&apos;t find any products matching your current selection. Try
           clearing your filters.
         </p>
       </div>

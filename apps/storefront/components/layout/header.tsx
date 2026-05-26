@@ -46,6 +46,7 @@ type HeaderProps = {
   cartCount?: number;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function Header(_props: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { cartCount: dynamicCartCount, isLoaded } = useCart();

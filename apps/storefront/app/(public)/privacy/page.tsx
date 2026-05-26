@@ -102,7 +102,7 @@ export default function PrivacyPage() {
             </h2>
             <p className="mt-6 text-lg text-zinc-600">
               If you have any questions or concerns about how we handle your
-              data, please don't hesitate to reach out to our legal team or
+              data, please don&apos;t hesitate to reach out to our legal team or
               customer support.
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
