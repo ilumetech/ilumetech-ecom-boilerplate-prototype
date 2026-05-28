@@ -33,6 +33,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/lib/hooks/use-cart";
 import CartDrawer from "@/components/cart/cart-drawer";
+import { useAuth } from "@clerk/nextjs";
+
 
 
 const navItems = [
@@ -55,6 +57,7 @@ export function Header(_props: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { cartCount: dynamicCartCount, isLoaded } = useCart();
+  const { isSignedIn, signOut } = useAuth();
 
   // Sync state with URL search parameter
   useEffect(() => {
@@ -146,6 +149,27 @@ export function Header(_props: HeaderProps) {
                   <Package className="h-4 w-4" />
                   Track Order
                 </Link>
+                <Separator className="my-2" />
+                {isSignedIn ? (
+                  <>
+                    <Link href="/account/profile" className="flex items-center gap-2 font-medium">
+                      <User className="h-4 w-4" />
+                      My Account
+                    </Link>
+                    <button
+                      onClick={() => signOut()}
+                      className="text-red-600 font-medium cursor-pointer w-full text-left flex items-center gap-2 border-none bg-transparent p-0"
+                    >
+                      <X className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <Link href="/sign-in" className="flex items-center gap-2 font-medium">
+                    <User className="h-4 w-4" />
+                    Sign In
+                  </Link>
+                )}
               </div>
             </SheetContent>
           </Sheet>
@@ -184,46 +208,62 @@ export function Header(_props: HeaderProps) {
             </Button>
 
             <div className="hidden md:block">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <User className="h-5 w-5" />
-                    <span className="sr-only">Account</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/account/profile" className="cursor-pointer">
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/account/orders" className="cursor-pointer">
-                      My Orders
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/account/addresses" className="cursor-pointer">
-                      My Addresses
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/account/wishlist" className="cursor-pointer">
-                      My Wishlist
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/account/notifications"
-                      className="cursor-pointer"
+              {isSignedIn ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <User className="h-5 w-5" />
+                      <span className="sr-only">Account</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/account/profile" className="cursor-pointer">
+                        Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/account/orders" className="cursor-pointer">
+                        My Orders
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/account/addresses" className="cursor-pointer">
+                        My Addresses
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/account/wishlist" className="cursor-pointer">
+                        My Wishlist
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/account/notifications"
+                        className="cursor-pointer"
+                      >
+                        Notifications
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="text-red-600 focus:text-red-600 cursor-pointer text-left w-full"
+                      onClick={() => signOut()}
                     >
-                      Notifications
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button variant="ghost" size="icon" asChild>
+                  <Link href="/sign-in">
+                    <User className="h-5 w-5" />
+                    <span className="sr-only">Sign In</span>
+                  </Link>
+                </Button>
+              )}
             </div>
 
             <Sheet>
