@@ -1,5 +1,5 @@
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsBoolean, IsOptional, IsString, IsNumber } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { QueryDto } from '../../common/dto';
 
 export class QueryProductDto extends QueryDto {
@@ -15,4 +15,18 @@ export class QueryProductDto extends QueryDto {
     return value;
   })
   isActive?: boolean;
+
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  minPrice?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  maxPrice?: number;
 }

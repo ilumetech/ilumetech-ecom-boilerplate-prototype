@@ -9,6 +9,9 @@ interface ProductListParams {
   search?: string;
   sortField?: "name" | "code" | "sellingPrice" | "createdAt";
   sortOrder?: "asc" | "desc";
+  color?: string;
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 function getApiBaseUrl(): string {
@@ -67,4 +70,17 @@ export async function getProductBySlug(
     | StorefrontProduct;
 
   return "data" in body ? body.data : body;
+}
+
+export async function getProductColors(): Promise<string[]> {
+  const response = await fetch(`${getApiBaseUrl()}/public/products/colors`, {
+    next: { revalidate: 300 }, // cache for 5 minutes
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load colors: ${response.status}`);
+  }
+
+  const body = (await response.json()) as { data: string[] };
+  return body.data;
 }

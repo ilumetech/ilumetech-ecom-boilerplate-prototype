@@ -2,7 +2,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Menu,
   Search,
@@ -49,8 +50,34 @@ type HeaderProps = {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function Header(_props: HeaderProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { cartCount: dynamicCartCount, isLoaded } = useCart();
+
+  // Sync state with URL search parameter
+  useEffect(() => {
+    const query = searchParams.get("search") || "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSearchQuery(query);
+    if (query) {
+      setIsSearchOpen(true);
+    }
+  }, [searchParams]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams.toString());
+    const query = searchQuery.trim();
+    if (query) {
+      params.set("search", query);
+    } else {
+      params.delete("search");
+    }
+    params.delete("page");
+    router.push(`/products?${params.toString()}`);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white">
@@ -219,14 +246,16 @@ export function Header(_props: HeaderProps) {
 
       {isSearchOpen && (
         <div className="border-b border-zinc-200 bg-white px-4 py-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-200">
-          <div className="relative mx-auto max-w-7xl">
+          <form onSubmit={handleSearchSubmit} className="relative mx-auto max-w-7xl">
             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
             <Input
               autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products, categories, or brands..."
-              className="h-12 w-full rounded-md border-zinc-200 bg-zinc-50 pl-11 text-base md:h-14 md:text-lg"
+              className="h-12 w-full rounded-md border-zinc-200 bg-zinc-50 pl-11 text-base md:h-14 md:text-lg text-black"
             />
-          </div>
+          </form>
         </div>
       )}
     </header>

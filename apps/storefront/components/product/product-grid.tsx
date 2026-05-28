@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { ProductCard } from "./product-card";
+import { Button } from "@/components/ui/button";
 import type { StorefrontProduct } from "@/lib/api/product";
 
 interface ProductGridProps {
@@ -8,6 +10,8 @@ interface ProductGridProps {
 }
 
 export default function ProductGrid({ products }: ProductGridProps) {
+  const router = useRouter();
+
   if (products.length === 0) {
     return (
       <div className="flex min-h-[400px] w-full flex-col items-center justify-center bg-zinc-50 p-12 text-center">
@@ -33,6 +37,13 @@ export default function ProductGrid({ products }: ProductGridProps) {
           We couldn&apos;t find any products matching your current selection. Try
           clearing your filters.
         </p>
+        <Button
+          onClick={() => router.push("/products")}
+          variant="outline"
+          className="mt-6 rounded-none border-black text-xs font-semibold uppercase tracking-wide hover:bg-black hover:text-white"
+        >
+          Clear Filters
+        </Button>
       </div>
     );
   }

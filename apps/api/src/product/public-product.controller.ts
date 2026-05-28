@@ -11,6 +11,11 @@ export class PublicProductController {
     return this.productService.findPublicAll(query);
   }
 
+  @Get('colors')
+  findPublicColors() {
+    return this.productService.findPublicColors();
+  }
+
   @Get(':slug')
   findOneBySlug(@Param('slug') slug: string) {
     return this.productService.findPublicBySlug(slug);

@@ -92,6 +92,25 @@ export class ProductService {
       filters.productCategoryId = query.productCategoryId;
     if (query.isActive !== undefined) filters.isActive = query.isActive;
 
+    if (query.color) {
+      filters.options = {
+        some: {
+          name: { equals: 'color', mode: 'insensitive' },
+          values: {
+            some: {
+              value: { equals: query.color, mode: 'insensitive' },
+            },
+          },
+        },
+      };
+    }
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      filters.sellingPrice = {
+        ...(query.minPrice !== undefined && { gte: query.minPrice }),
+        ...(query.maxPrice !== undefined && { lte: query.maxPrice }),
+      };
+    }
+
     const { skip, take, where, orderBy } = buildPrismaQuery({
       search: query.search,
       searchFields: ['name', 'code'],
@@ -127,6 +146,25 @@ export class ProductService {
     if (query.productCategoryId)
       filters.productCategoryId = query.productCategoryId;
 
+    if (query.color) {
+      filters.options = {
+        some: {
+          name: { equals: 'color', mode: 'insensitive' },
+          values: {
+            some: {
+              value: { equals: query.color, mode: 'insensitive' },
+            },
+          },
+        },
+      };
+    }
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      filters.sellingPrice = {
+        ...(query.minPrice !== undefined && { gte: query.minPrice }),
+        ...(query.maxPrice !== undefined && { lte: query.maxPrice }),
+      };
+    }
+
     const { skip, take, where, orderBy } = buildPrismaQuery({
       search: query.search,
       searchFields: ['name', 'code'],
@@ -153,6 +191,21 @@ export class ProductService {
       data: products.map((p) => this.mapToPublicResponse(p)),
       meta: buildPaginationMeta(total, query.page ?? 1, query.limit ?? 10),
     };
+  }
+
+  async findPublicColors(): Promise<{ data: string[] }> {
+    const values = await this.prisma.productOptionValue.findMany({
+      where: {
+        option: {
+          name: { equals: 'color', mode: 'insensitive' },
+        },
+      },
+      select: {
+        value: true,
+      },
+      distinct: ['value'],
+    });
+    return { data: values.map((v) => v.value) };
   }
 
   async findOne(id: string): Promise<Product> {

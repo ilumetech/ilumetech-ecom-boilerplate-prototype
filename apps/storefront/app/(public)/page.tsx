@@ -1,9 +1,10 @@
 // app/page.tsx
 import Link from "next/link";
-import { Award, Box, Headphones, Truck, Heart } from "lucide-react";
+import { Award, Box, Headphones, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/product/product-card";
 import { getProducts } from "@/lib/api/product";
+import { getProductCategories } from "@/lib/api/category";
 
 const trustItems = [
   {
@@ -28,19 +29,17 @@ const trustItems = [
   },
 ];
 
-const categories = [
-  { name: "Sneakers", href: "/products?category=sneakers" },
-  { name: "Running", href: "/products?category=running" },
-  { name: "Slides", href: "/products?category=slides" },
-  { name: "Casual", href: "/products?category=casual" },
-];
-
 export default async function HomePage() {
-  const products = await getProducts({
-    limit: 4,
-    sortField: "createdAt",
-    sortOrder: "desc",
-  });
+  const [products, categories] = await Promise.all([
+    getProducts({
+      limit: 4,
+      sortField: "createdAt",
+      sortOrder: "desc",
+    }),
+    getProductCategories().catch(() => []),
+  ]);
+
+  const displayedCategories = categories.slice(0, 4);
 
   return (
     <>
@@ -109,18 +108,22 @@ export default async function HomePage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-10 md:px-6 lg:py-14">
-        <SectionHeader title="Shop by Category" href="/products" />
+        <SectionHeader title="Shop by Category" href="/categories" />
 
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5">
-          {categories.map((category) => (
+          {displayedCategories.map((category) => (
             <Link
-              key={category.name}
-              href={category.href}
+              key={category.id}
+              href={`/products?productCategoryId=${category.id}`}
               className="group block"
             >
-              <div className="aspect-square rounded-md bg-gradient-to-br from-zinc-100 to-zinc-200 transition group-hover:opacity-80" />
+              <div className="aspect-square rounded-md bg-gradient-to-br from-zinc-100 to-zinc-200 transition group-hover:opacity-80 flex items-center justify-center border border-zinc-200 shadow-sm">
+                <span className="text-4xl font-black text-zinc-300 uppercase tracking-widest select-none">
+                  {category.name.substring(0, 2)}
+                </span>
+              </div>
               <div className="mt-4 flex items-center justify-between gap-3">
-                <h3 className="text-sm font-bold uppercase tracking-wide">
+                <h3 className="text-sm font-bold uppercase tracking-wide text-zinc-800">
                   {category.name}
                 </h3>
                 <span className="text-sm transition group-hover:translate-x-1">
