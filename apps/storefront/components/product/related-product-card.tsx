@@ -14,7 +14,10 @@ export function RelatedProductCard({ product }: RelatedProductCardProps) {
   const price = primaryVariant?.finalPrice ?? product.sellingPrice;
   const colorway =
     primaryVariant?.optionValues
-      .filter((optionValue) => optionValue.optionName.toLowerCase() === "color")
+      .filter((optionValue) => {
+        const lowerName = optionValue.optionName.toLowerCase();
+        return lowerName.includes("color") || lowerName.includes("colour") || lowerName.includes("warna");
+      })
       .map((optionValue) => optionValue.value)
       .join(" / ") || product.productCategory.name;
 

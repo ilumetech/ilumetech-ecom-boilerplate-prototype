@@ -832,7 +832,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         const isDbId =
           c.id &&
           !c.id.startsWith("temp_") &&
-          (c.id.includes("-") || c.id.length === 24 || c.id.length === 36);
+          (c.id.includes("-") || c.id.length === 24 || c.id.length === 25 || c.id.length === 36);
 
         if (isDbId) {
           optionValueIds.push(c.id);

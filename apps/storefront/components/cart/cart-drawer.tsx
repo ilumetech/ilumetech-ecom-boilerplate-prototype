@@ -95,16 +95,18 @@ export default function CartDrawer() {
                 <div className="flex h-8 items-center border border-zinc-200">
                   <button
                     type="button"
+                    disabled={item.quantity <= 1}
                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className="flex h-full w-8 items-center justify-center hover:bg-zinc-50 text-zinc-500 hover:text-black"
+                    className="flex h-full w-8 items-center justify-center hover:bg-zinc-50 text-zinc-500 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Minus className="h-3 w-3" />
                   </button>
                   <span className="w-8 text-center text-xs font-bold">{item.quantity}</span>
                   <button
                     type="button"
+                    disabled={item.quantity >= item.stockOnHand}
                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="flex h-full w-8 items-center justify-center hover:bg-zinc-50 text-zinc-500 hover:text-black"
+                    className="flex h-full w-8 items-center justify-center hover:bg-zinc-50 text-zinc-500 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-3 w-3" />
                   </button>

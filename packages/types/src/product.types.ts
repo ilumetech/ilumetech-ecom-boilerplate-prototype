@@ -54,6 +54,7 @@ export interface ProductVariant {
   discountMode: "AUTOMATIC" | "MANUAL" | null;
   imageUrl: string | null;
   isActive: boolean;
+  stockOnHand: number;
   optionValues: ProductVariantOptionValue[];
 }
 

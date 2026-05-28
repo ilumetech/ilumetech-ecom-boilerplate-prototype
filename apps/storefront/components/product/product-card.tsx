@@ -16,7 +16,10 @@ export function ProductCard({ product }: ProductCardProps) {
   const price = primaryVariant?.finalPrice ?? product.sellingPrice;
   const colorway =
     primaryVariant?.optionValues
-      .filter((optionValue) => optionValue.optionName.toLowerCase() === "color")
+      .filter((optionValue) => {
+        const lowerName = optionValue.optionName.toLowerCase();
+        return lowerName.includes("color") || lowerName.includes("colour") || lowerName.includes("warna");
+      })
       .map((optionValue) => optionValue.value)
       .join(" / ") || product.productCategory.name;
 
@@ -49,19 +52,6 @@ export function ProductCard({ product }: ProductCardProps) {
             <Heart className="h-4 w-4" />
             <span className="sr-only">Add to wishlist</span>
           </button>
-        </div>
-
-        {/* Desktop Quick Add */}
-        <div className="absolute bottom-0 left-0 w-full translate-y-full p-4 transition-transform duration-300 ease-in-out group-hover:translate-y-0 hidden sm:block">
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            className="h-10 w-full rounded-none bg-black text-xs font-bold uppercase tracking-widest text-white transition-all hover:bg-zinc-800"
-          >
-            Quick Add
-          </Button>
         </div>
       </div>
 

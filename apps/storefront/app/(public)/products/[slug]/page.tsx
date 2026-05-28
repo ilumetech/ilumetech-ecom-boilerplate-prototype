@@ -160,7 +160,10 @@ function ProductInfo({ product }: { product: StorefrontProduct }) {
   const primaryVariant = product.variants?.find((variant) => variant.isActive);
   const colorway =
     primaryVariant?.optionValues
-      .filter((optionValue) => optionValue.optionName.toLowerCase() === "color")
+      .filter((optionValue) => {
+        const lowerName = optionValue.optionName.toLowerCase();
+        return lowerName.includes("color") || lowerName.includes("colour") || lowerName.includes("warna");
+      })
       .map((optionValue) => optionValue.value)
       .join(" / ") || product.productCategory.name;
 

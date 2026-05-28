@@ -19,6 +19,10 @@ export const PERMISSIONS = {
     VIEW_COST: "product:view_cost",
     VIEW_PRICING: "product:view_pricing",
   },
+  STOCK: {
+    READ: "stock:read",
+    UPDATE: "stock:update",
+  },
   PRODUCT_CATEGORY: {
     CREATE: "product-category:create",
     READ: "product-category:read",

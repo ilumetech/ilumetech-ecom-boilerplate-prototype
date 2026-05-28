@@ -4,6 +4,7 @@ export * from "./product-category.types";
 export * from "./product.types";
 export * from "./query.types";
 export * from "./role.types";
+export * from "./stock.types";
 export * from "./unit.types";
 export * from "./user.types";
 export * from "./constants/permissions.constant";

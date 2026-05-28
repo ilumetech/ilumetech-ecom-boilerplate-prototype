@@ -451,6 +451,12 @@ export class ProductService {
                     compareAtPrice: v.compareAtPrice,
                     imageUrl: v.imageUrl,
                     isActive: v.isActive ?? true,
+                    optionValues: {
+                      deleteMany: {},
+                      create: optionValueIds.map((ovId) => ({
+                        optionValueId: ovId,
+                      })),
+                    },
                   },
                 });
               } else {
@@ -525,6 +531,12 @@ export class ProductService {
                 compareAtPrice: v.compareAtPrice,
                 imageUrl: v.imageUrl,
                 isActive: v.isActive ?? true,
+                optionValues: {
+                  deleteMany: {},
+                  create: (v.optionValueIds ?? []).map((ovId) => ({
+                    optionValueId: ovId,
+                  })),
+                },
               },
             });
           } else {
@@ -703,6 +715,7 @@ export class ProductService {
         discountMode: v.discountMode,
         imageUrl: v.imageUrl,
         isActive: v.isActive,
+        stockOnHand: v.stockOnHand,
         optionValues: v.optionValues.map((ov) => ({
           optionName: ov.optionValue.option.name,
           value: ov.optionValue.value,

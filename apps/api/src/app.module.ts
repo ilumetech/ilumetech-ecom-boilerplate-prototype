@@ -17,6 +17,7 @@ import { AuditLogModule } from './audit-log/audit-log.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ColorModule } from './color/color.module';
 import { UploadModule } from './upload/upload.module';
+import { StockModule } from './stock/stock.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { UploadModule } from './upload/upload.module';
     DashboardModule,
     ColorModule,
     UploadModule,
+    StockModule,
   ],
   controllers: [AppController],
   providers: [

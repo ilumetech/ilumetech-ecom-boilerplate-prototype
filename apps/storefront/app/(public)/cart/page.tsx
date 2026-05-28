@@ -146,16 +146,7 @@ function CartItem({
   onUpdateQuantity,
   onRemove,
 }: {
-  item: {
-    id: string;
-    name: string;
-    colorway: string;
-    size: string;
-    price: number;
-    quantity: number;
-    slug: string;
-    imageUrl?: string;
-  };
+  item: CartItemType;
   onUpdateQuantity: (quantity: number) => void;
   onRemove: () => void;
 }) {
@@ -185,6 +176,7 @@ function CartItem({
           <div className="mt-3 flex items-center gap-3 md:hidden">
             <QuantityControl
               quantity={item.quantity}
+              stockOnHand={item.stockOnHand}
               onIncrease={() => onUpdateQuantity(item.quantity + 1)}
               onDecrease={() => onUpdateQuantity(item.quantity - 1)}
             />
@@ -206,6 +198,7 @@ function CartItem({
       <div className="hidden justify-center md:flex">
         <QuantityControl
           quantity={item.quantity}
+          stockOnHand={item.stockOnHand}
           onIncrease={() => onUpdateQuantity(item.quantity + 1)}
           onDecrease={() => onUpdateQuantity(item.quantity - 1)}
         />
@@ -233,10 +226,12 @@ function CartItem({
 
 function QuantityControl({
   quantity,
+  stockOnHand,
   onIncrease,
   onDecrease,
 }: {
   quantity: number;
+  stockOnHand: number;
   onIncrease: () => void;
   onDecrease: () => void;
 }) {
@@ -244,7 +239,8 @@ function QuantityControl({
     <div className="flex h-10 w-32 items-center justify-between border border-zinc-300">
       <button
         onClick={onDecrease}
-        className="flex h-full w-10 items-center justify-center hover:bg-zinc-100"
+        disabled={quantity <= 1}
+        className="flex h-full w-10 items-center justify-center hover:bg-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Minus className="h-4 w-4" />
         <span className="sr-only">Decrease quantity</span>
@@ -252,7 +248,8 @@ function QuantityControl({
       <span className="text-sm font-semibold">{quantity}</span>
       <button
         onClick={onIncrease}
-        className="flex h-full w-10 items-center justify-center hover:bg-zinc-100"
+        disabled={quantity >= stockOnHand}
+        className="flex h-full w-10 items-center justify-center hover:bg-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Plus className="h-4 w-4" />
         <span className="sr-only">Increase quantity</span>

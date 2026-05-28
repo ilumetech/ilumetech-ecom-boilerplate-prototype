@@ -15,6 +15,7 @@ import {
   TeamOutlined,
   BgColorsOutlined,
   MenuOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
 import { PERMISSIONS } from "@ilumetech/types";
 
@@ -59,6 +60,12 @@ const NAV_CONFIG: NavItemConfig[] = [
         label: "Warna",
         permission: PERMISSIONS.COLOR.READ,
         icon: <BgColorsOutlined />,
+      },
+      {
+        key: "/stock",
+        label: "Stok",
+        permission: PERMISSIONS.STOCK.READ,
+        icon: <InboxOutlined />,
       },
     ],
   },

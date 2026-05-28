@@ -13,6 +13,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   imageUrl?: string;
+  stockOnHand: number;
 }
 
 export interface CartContextType {
@@ -36,9 +37,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const stored = localStorage.getItem("ilumetech-cart");
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(stored) as Partial<CartItem>[];
+        const migrated = parsed.map((item) => ({
+          ...item,
+          stockOnHand: typeof item.stockOnHand === "number" ? item.stockOnHand : 9999,
+        })) as CartItem[];
         setTimeout(() => {
-          setItems(parsed);
+          setItems(migrated);
           setIsLoaded(true);
         }, 0);
         return;
@@ -74,16 +79,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (existingIndex > -1) {
         const updated = [...current];
         const existing = updated[existingIndex];
+        const newQuantity = Math.min(
+          existing.quantity + newItem.quantity,
+          newItem.stockOnHand,
+        );
         updated[existingIndex] = {
           ...existing,
-          quantity: existing.quantity + newItem.quantity,
+          stockOnHand: newItem.stockOnHand, // update stock in case it changed
+          quantity: newQuantity,
         };
         return updated;
       }
 
       // Create a unique ID for this variation
       const id = `${newItem.productId}-${encodeURIComponent(newItem.colorway)}-${encodeURIComponent(newItem.size)}`;
-      return [...current, { ...newItem, id }];
+      const quantity = Math.min(newItem.quantity, newItem.stockOnHand);
+      return [...current, { ...newItem, id, quantity }];
     });
   };
 
@@ -94,7 +105,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const updateQuantity = (id: string, quantity: number) => {
     if (quantity < 1) return;
     setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, quantity } : item)),
+      current.map((item) =>
+        item.id === id
+          ? { ...item, quantity: Math.min(quantity, item.stockOnHand) }
+          : item,
+      ),
     );
   };
 
