@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   App,
@@ -24,7 +24,6 @@ import {
   ArrowLeftOutlined,
   DeleteOutlined,
   PlusOutlined,
-  EyeOutlined,
 } from "@ant-design/icons";
 import {
   DndContext,
@@ -389,6 +388,10 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
 
+  const isInitialized = useRef(false);
+  const variantsAreDirty = useRef(false);
+  const optionsAreDirty = useRef(false);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -502,7 +505,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
   const savedPovIds = useMemo(() => {
     if (!isEditMode || !product?.options) return new Set<string>();
-    return new Set(product.options.flatMap((opt) => opt.values.map((v) => v.id)));
+    return new Set(
+      product.options.flatMap((opt) => opt.values.map((v) => v.id)),
+    );
   }, [isEditMode, product]);
 
   const { data: productsData } = useQuery({
@@ -586,7 +591,16 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
   useEffect(() => {
     if (isEditMode && product) {
+      isInitialized.current = false;
+      variantsAreDirty.current = false;
+      optionsAreDirty.current = false;
       form.setFieldsValue(buildOriginalValues());
+      setTimeout(() => {
+        // Safe: auto-gen useEffect is synchronous and React 18's
+        // MessageChannel-based scheduler flushes it before setTimeout.
+        // If auto-gen ever becomes async, revisit this guard.
+        isInitialized.current = true;
+      }, 0);
     }
   }, [isEditMode, product, form, buildOriginalValues]);
 
@@ -1015,61 +1029,77 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       tempOptionValueIds: [],
     };
 
-    const payload = {
-      ...rest,
-      options: hasVariantOptions
-        ? values.options?.map((opt, optIdx) => {
-            const isSizeRun = opt.name === "Size (Run)";
+    const builtOptions = hasVariantOptions
+      ? values.options?.map((opt, optIdx) => {
+          const isSizeRun = opt.name === "Size (Run)";
+          const rawValues = isSizeRun
+            ? typeof opt.values === "string"
+              ? parseSizeRun(opt.values)
+              : opt.values
+            : opt.values;
+          return {
+            name: opt.name,
+            position: optIdx,
+            values: rawValues.map((v, valIdx) => ({
+              id: v.value || undefined,
+              value: v.label,
+              position: valIdx,
+            })),
+          };
+        })
+      : [];
 
-            const rawValues = isSizeRun
-              ? typeof opt.values === "string"
-                ? parseSizeRun(opt.values)
-                : opt.values
-              : opt.values;
-
+    const builtVariants =
+      hasVariantOptions && values.variants?.length
+        ? values.variants.map((v, index) => {
+            const currentVariant = form.getFieldValue(["variants", index]);
             return {
-              name: opt.name,
-              position: optIdx,
-              values: rawValues.map((v, valIdx) => ({
-                id: v.value || undefined,
-                value: v.label,
-                position: valIdx,
-              })),
+              sku: v.sku,
+              name: v.name || currentVariant?.name || "",
+              price: v.price,
+              finalPrice: v.finalPrice ?? v.price,
+              compareAtPrice: v.compareAtPrice,
+              discountType: v.discountType,
+              discountValue: v.discountValue,
+              discountMode: v.discountMode,
+              isActive: v.isActive,
+              imageUrl: v.imageUrl || currentVariant?.imageUrl,
+              optionValueIds:
+                v.optionValueIds || currentVariant?.optionValueIds || [],
+              tempOptionValueIds:
+                v.tempOptionValueIds ||
+                currentVariant?.tempOptionValueIds ||
+                [],
             };
           })
-        : [],
-      variants:
-        hasVariantOptions && values.variants?.length
-          ? values.variants.map((v, index) => {
-              const currentVariant = form.getFieldValue(["variants", index]);
-              return {
-                sku: v.sku,
-                name: v.name || currentVariant?.name || "",
-                price: v.price,
-                finalPrice: v.finalPrice ?? v.price,
-                compareAtPrice: v.compareAtPrice,
-                discountType: v.discountType,
-                discountValue: v.discountValue,
-                discountMode: v.discountMode,
-                isActive: v.isActive,
-                imageUrl: v.imageUrl || currentVariant?.imageUrl,
-                optionValueIds:
-                  v.optionValueIds || currentVariant?.optionValueIds || [],
-                tempOptionValueIds:
-                  v.tempOptionValueIds ||
-                  currentVariant?.tempOptionValueIds ||
-                  [],
-              };
-            })
-          : [defaultVariant],
-    };
+        : [defaultVariant];
 
     if (!isEditMode) {
-      createMutation.mutate(payload);
+      createMutation.mutate({
+        ...rest,
+        options: builtOptions,
+        variants: builtVariants,
+      });
       return;
     }
 
-    updateMutation.mutate(payload);
+    const { options: _o, variants: _v, ...flatAndImages } = rest;
+    const original = buildOriginalValues();
+    const dirtyFlat = getDirtyFields(
+      flatAndImages as Record<string, unknown>,
+      original as Record<string, unknown>,
+    );
+
+    const patchPayload: Record<string, unknown> = { ...dirtyFlat };
+    if (optionsAreDirty.current) patchPayload.options = builtOptions;
+    if (variantsAreDirty.current) patchPayload.variants = builtVariants;
+
+    if (Object.keys(patchPayload).length === 0) {
+      message.info("Tidak ada perubahan");
+      return;
+    }
+
+    updateMutation.mutate(patchPayload);
   }
 
   const categoryOptions = useMemo(() => {
@@ -1275,6 +1305,19 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       form={form}
       layout="vertical"
       onFinish={handleFinish}
+      onValuesChange={(changedValues) => {
+        if (!isEditMode || !isInitialized.current) return;
+        if ("options" in changedValues) optionsAreDirty.current = true;
+        if ("variants" in changedValues) variantsAreDirty.current = true;
+        if (
+          "finalPrice" in changedValues ||
+          "discountMode" in changedValues ||
+          "discountType" in changedValues ||
+          "discountValue" in changedValues
+        ) {
+          variantsAreDirty.current = true;
+        }
+      }}
       initialValues={{ isActive: true }}
       requiredMark="optional"
     >
