@@ -33,18 +33,23 @@ const MOVEMENT_TYPE_OPTIONS: Array<{
 }> = [
   { label: "Masuk", value: "IN" },
   { label: "Keluar", value: "OUT" },
-  { label: "Penyesuaian", value: "ADJUSTMENT" },
+  { label: "Masuk Manual", value: "MANUAL_IN" },
+  { label: "Keluar Manual", value: "MANUAL_OUT" },
+  { label: "Masuk Opname", value: "OPNAME_IN" },
+  { label: "Keluar Opname", value: "OPNAME_OUT" },
+  { label: "Masuk Transfer", value: "TRANSFER_IN" },
+  { label: "Keluar Transfer", value: "TRANSFER_OUT" },
+  { label: "Penghapusan Stok", value: "WRITE_OFF" },
 ];
 
 const REFERENCE_TYPE_OPTIONS: Array<{
   label: string;
   value: StockReferenceType;
 }> = [
-  { label: "Manual", value: "MANUAL" },
   { label: "Order", value: "ORDER" },
-  { label: "Retur", value: "RETURN" },
-  { label: "Stock Opname", value: "STOCK_OPNAME" },
   { label: "Pembelian", value: "PURCHASE" },
+  { label: "Retur", value: "RETURN" },
+  { label: "Transfer", value: "TRANSFER" },
 ];
 
 export function StockMovementFormModal({
@@ -101,7 +106,7 @@ export function StockMovementFormModal({
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ type: "IN", referenceType: "MANUAL" }}
+        initialValues={{ type: "IN" }}
         onFinish={handleSubmit}
       >
         <Form.Item

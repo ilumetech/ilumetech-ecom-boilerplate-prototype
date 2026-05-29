@@ -23,13 +23,23 @@ function mapSortOrder(
   return undefined;
 }
 
-function movementTypeTag(type: StockMovement["type"]) {
-  const config = {
-    IN: { color: "green", label: "Masuk" },
-    OUT: { color: "red", label: "Keluar" },
-    ADJUSTMENT: { color: "blue", label: "Penyesuaian" },
-  }[type];
+const MOVEMENT_TYPE_CONFIG: Record<
+  StockMovement["type"],
+  { color: string; label: string }
+> = {
+  IN: { color: "green", label: "Masuk" },
+  OUT: { color: "red", label: "Keluar" },
+  MANUAL_IN: { color: "green", label: "Masuk Manual" },
+  MANUAL_OUT: { color: "red", label: "Keluar Manual" },
+  OPNAME_IN: { color: "cyan", label: "Masuk Opname" },
+  OPNAME_OUT: { color: "orange", label: "Keluar Opname" },
+  TRANSFER_IN: { color: "blue", label: "Masuk Transfer" },
+  TRANSFER_OUT: { color: "geekblue", label: "Keluar Transfer" },
+  WRITE_OFF: { color: "volcano", label: "Penghapusan Stok" },
+};
 
+function movementTypeTag(type: StockMovement["type"]) {
+  const config = MOVEMENT_TYPE_CONFIG[type];
   return <Tag color={config.color}>{config.label}</Tag>;
 }
 

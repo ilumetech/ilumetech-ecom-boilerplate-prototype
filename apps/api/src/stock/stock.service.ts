@@ -153,6 +153,14 @@ export class StockService {
     if (!Number.isInteger(dto.quantity) || dto.quantity <= 0) {
       throw new BadRequestException('Quantity must be greater than zero');
     }
+
+    if (dto.referenceType && !dto.referenceId) {
+      throw new BadRequestException('referenceId is required when referenceType is set');
+    }
+
+    if (dto.referenceId && !dto.referenceType) {
+      throw new BadRequestException('referenceType is required when referenceId is set');
+    }
   }
 
   private readonly IN_TYPES: Set<StockMovementType> = new Set([

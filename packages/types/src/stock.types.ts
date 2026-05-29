@@ -1,11 +1,15 @@
-export type StockMovementType = "IN" | "OUT" | "ADJUSTMENT";
+export type StockMovementType =
+  | "IN"
+  | "OUT"
+  | "MANUAL_IN"
+  | "MANUAL_OUT"
+  | "OPNAME_IN"
+  | "OPNAME_OUT"
+  | "TRANSFER_IN"
+  | "TRANSFER_OUT"
+  | "WRITE_OFF";
 
-export type StockReferenceType =
-  | "MANUAL"
-  | "ORDER"
-  | "RETURN"
-  | "STOCK_OPNAME"
-  | "PURCHASE";
+export type StockReferenceType = "ORDER" | "PURCHASE" | "RETURN" | "TRANSFER";
 
 export interface StockVariantProductRef {
   id: string;
@@ -33,6 +37,6 @@ export interface StockMovement {
   referenceId: string | null;
   reason: string | null;
   note: string | null;
-  actorId: string | null;
+  actorId: string;
   createdAt: string;
 }
