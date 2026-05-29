@@ -500,6 +500,11 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   const hasSavedOptions =
     isEditMode && product?.options && product.options.length > 0;
 
+  const savedPovIds = useMemo(() => {
+    if (!isEditMode || !product?.options) return new Set<string>();
+    return new Set(product.options.flatMap((opt) => opt.values.map((v) => v.id)));
+  }, [isEditMode, product]);
+
   const { data: productsData } = useQuery({
     queryKey: ["products", "count"],
     queryFn: () => productApi.getAll({ limit: 1 }),
@@ -829,14 +834,11 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       const tempOptionValueIds: string[] = [];
 
       combo.forEach((c) => {
-        const isDbId =
-          c.id &&
-          !c.id.startsWith("temp_") &&
-          (c.id.includes("-") || c.id.length === 24 || c.id.length === 25 || c.id.length === 36);
+        if (!c.id) return;
 
-        if (isDbId) {
+        if (savedPovIds.has(c.id)) {
           optionValueIds.push(c.id);
-        } else if (c.id) {
+        } else {
           tempOptionValueIds.push(c.id);
         }
       });
@@ -879,6 +881,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     variantImages,
     watchSellingPrice,
     watchFinalPrice,
+    savedPovIds,
   ]);
 
   const createMutation = useMutation({
@@ -1022,18 +1025,11 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
             return {
               name: opt.name,
               position: optIdx,
-              values: rawValues.map((v, valIdx) => {
-                const isExisting =
-                  v.value.includes("-") ||
-                  v.value.length === 24 ||
-                  v.value.length === 36;
-
-                return {
-                  id: isExisting ? v.value : undefined,
-                  value: v.label,
-                  position: valIdx,
-                };
-              }),
+              values: rawValues.map((v, valIdx) => ({
+                id: v.value || undefined,
+                value: v.label,
+                position: valIdx,
+              })),
             };
           })
         : [],
