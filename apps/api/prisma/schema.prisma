@@ -195,15 +195,20 @@ enum DiscountMode {
 enum StockMovementType {
   IN
   OUT
-  ADJUSTMENT
+  MANUAL_IN
+  MANUAL_OUT
+  OPNAME_IN
+  OPNAME_OUT
+  TRANSFER_IN
+  TRANSFER_OUT
+  WRITE_OFF
 }
 
 enum StockReferenceType {
-  MANUAL
   ORDER
-  RETURN
-  STOCK_OPNAME
   PURCHASE
+  RETURN
+  TRANSFER
 }
 
 model StockMovement {
@@ -218,11 +223,12 @@ model StockMovement {
   referenceId      String?
   reason           String?
   note             String?
-  actorId          String?
+  actorId          String
   createdAt        DateTime            @default(now())
 
   @@index([productVariantId, createdAt])
   @@index([referenceType, referenceId])
+  @@index([actorId])
 }
 
 model AuditLog {
