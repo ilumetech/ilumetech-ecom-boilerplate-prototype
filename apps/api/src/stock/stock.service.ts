@@ -150,13 +150,25 @@ export class StockService {
   }
 
   private validateMovement(dto: CreateStockMovementDto): void {
-    if (
-      dto.type !== StockMovementType.ADJUSTMENT &&
-      (!Number.isInteger(dto.quantity) || dto.quantity <= 0)
-    ) {
+    if (!Number.isInteger(dto.quantity) || dto.quantity <= 0) {
       throw new BadRequestException('Quantity must be greater than zero');
     }
   }
+
+  private readonly IN_TYPES: Set<StockMovementType> = new Set([
+    StockMovementType.IN,
+    StockMovementType.MANUAL_IN,
+    StockMovementType.OPNAME_IN,
+    StockMovementType.TRANSFER_IN,
+  ]);
+
+  private readonly OUT_TYPES: Set<StockMovementType> = new Set([
+    StockMovementType.OUT,
+    StockMovementType.MANUAL_OUT,
+    StockMovementType.OPNAME_OUT,
+    StockMovementType.TRANSFER_OUT,
+    StockMovementType.WRITE_OFF,
+  ]);
 
   private async applyStockChange(
     tx: Prisma.TransactionClient,
@@ -167,25 +179,37 @@ export class StockService {
     balanceAfter: number;
     movementQuantity: number;
   }> {
-    if (dto.type === StockMovementType.IN) {
-      const updatedVariant = await tx.productVariant.update({
-        where: { id: productVariantId },
-        data: { stockOnHand: { increment: dto.quantity } },
-        select: { stockOnHand: true },
-      });
-
-      return {
-        balanceBefore: updatedVariant.stockOnHand - dto.quantity,
-        balanceAfter: updatedVariant.stockOnHand,
-        movementQuantity: dto.quantity,
-      };
+    if (this.IN_TYPES.has(dto.type)) {
+      return this.applyStockIn(tx, productVariantId, dto.quantity);
     }
 
-    if (dto.type === StockMovementType.OUT) {
+    if (this.OUT_TYPES.has(dto.type)) {
       return this.applyStockOut(tx, productVariantId, dto.quantity);
     }
 
-    return this.applyStockAdjustment(tx, productVariantId, dto.quantity);
+    throw new BadRequestException(`Unsupported movement type: ${dto.type}`);
+  }
+
+  private async applyStockIn(
+    tx: Prisma.TransactionClient,
+    productVariantId: string,
+    quantity: number,
+  ): Promise<{
+    balanceBefore: number;
+    balanceAfter: number;
+    movementQuantity: number;
+  }> {
+    const updatedVariant = await tx.productVariant.update({
+      where: { id: productVariantId },
+      data: { stockOnHand: { increment: quantity } },
+      select: { stockOnHand: true },
+    });
+
+    return {
+      balanceBefore: updatedVariant.stockOnHand - quantity,
+      balanceAfter: updatedVariant.stockOnHand,
+      movementQuantity: quantity,
+    };
   }
 
   private async applyStockOut(
@@ -216,38 +240,6 @@ export class StockService {
       balanceBefore: updatedVariant.stockOnHand + quantity,
       balanceAfter: updatedVariant.stockOnHand,
       movementQuantity: quantity,
-    };
-  }
-
-  private async applyStockAdjustment(
-    tx: Prisma.TransactionClient,
-    productVariantId: string,
-    stockOnHand: number,
-  ): Promise<{
-    balanceBefore: number;
-    balanceAfter: number;
-    movementQuantity: number;
-  }> {
-    const variant = await tx.productVariant.findUnique({
-      where: { id: productVariantId },
-      select: { stockOnHand: true },
-    });
-
-    if (!variant)
-      throw new NotFoundException(`Variant ${productVariantId} not found`);
-    if (variant.stockOnHand === stockOnHand) {
-      throw new BadRequestException('Adjusted stock must change the balance');
-    }
-
-    await tx.productVariant.update({
-      where: { id: productVariantId },
-      data: { stockOnHand },
-    });
-
-    return {
-      balanceBefore: variant.stockOnHand,
-      balanceAfter: stockOnHand,
-      movementQuantity: Math.abs(stockOnHand - variant.stockOnHand),
     };
   }
 
