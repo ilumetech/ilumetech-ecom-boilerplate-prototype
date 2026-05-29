@@ -485,17 +485,43 @@ export class ProductService {
               (dv) => !incomingSkus.has(dv.sku),
             );
             if (variantsToDelete.length > 0) {
-              await tx.productVariant.deleteMany({
-                where: {
-                  id: { in: variantsToDelete.map((dv) => dv.id) },
-                },
+              const variantIds = variantsToDelete.map((dv) => dv.id);
+              const movementCount = await tx.stockMovement.count({
+                where: { productVariantId: { in: variantIds } },
+              });
+              if (movementCount > 0) {
+                throw new BadRequestException(
+                  'Varian ini memiliki riwayat stok dan tidak dapat dihapus.',
+                );
+              }
+              await tx.productVariant.updateMany({
+                where: { id: { in: variantIds } },
+                data: { isActive: false },
               });
             }
           }
         } else {
           // Explicitly empty options: clean up all options/variants and recreate default single variant
           await tx.productOption.deleteMany({ where: { productId: id } });
-          await tx.productVariant.deleteMany({ where: { productId: id } });
+          const existingVariants = await tx.productVariant.findMany({
+            where: { productId: id },
+            select: { id: true },
+          });
+          const existingVariantIds = existingVariants.map((v) => v.id);
+          if (existingVariantIds.length > 0) {
+            const movementCount = await tx.stockMovement.count({
+              where: { productVariantId: { in: existingVariantIds } },
+            });
+            if (movementCount > 0) {
+              throw new BadRequestException(
+                'Varian ini memiliki riwayat stok dan tidak dapat dihapus.',
+              );
+            }
+            await tx.productVariant.updateMany({
+              where: { productId: id },
+              data: { isActive: false },
+            });
+          }
 
           if (variants && variants.length > 0) {
             for (const v of variants) {
@@ -566,10 +592,18 @@ export class ProductService {
           (dv) => !incomingSkus.has(dv.sku),
         );
         if (variantsToDelete.length > 0) {
-          await tx.productVariant.deleteMany({
-            where: {
-              id: { in: variantsToDelete.map((dv) => dv.id) },
-            },
+          const variantIds = variantsToDelete.map((dv) => dv.id);
+          const movementCount = await tx.stockMovement.count({
+            where: { productVariantId: { in: variantIds } },
+          });
+          if (movementCount > 0) {
+            throw new BadRequestException(
+              'Varian ini memiliki riwayat stok dan tidak dapat dihapus.',
+            );
+          }
+          await tx.productVariant.updateMany({
+            where: { id: { in: variantIds } },
+            data: { isActive: false },
           });
         }
       }
