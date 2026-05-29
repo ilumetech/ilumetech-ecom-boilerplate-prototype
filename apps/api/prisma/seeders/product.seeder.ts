@@ -29,6 +29,12 @@ export async function seedProducts(prisma: PrismaClient) {
     },
   });
 
+  await prisma.productCounter.upsert({
+    where: { prefix: 'PRD' },
+    update: { lastSeq: 1 },
+    create: { prefix: 'PRD', lastSeq: 1 },
+  });
+
   const sizeOption = await prisma.productOption.upsert({
     where: { productId_name: { productId: product.id, name: 'Size' } },
     update: {},
