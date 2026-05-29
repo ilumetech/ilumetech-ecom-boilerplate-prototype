@@ -910,8 +910,13 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       form.setFieldValue("productCategoryId", response.data.id);
       setCategorySearch("");
     },
-    onError: handleError,
+    onError: (err) => {
+      handleError(err);
+      form.setFieldValue("productCategoryId", undefined);
+    },
   });
+
+  const isCategoryCreating = createCategoryMutation.isPending;
 
   const createColorMutation = useMutation({
     mutationFn: (payload: { name: string; hexCode?: string }) =>
@@ -2946,6 +2951,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                 size="large"
                 htmlType="submit"
                 loading={isPending}
+                disabled={isCategoryCreating}
               >
                 {isEditMode ? "Perbarui Produk" : "Simpan Produk"}
               </Button>
