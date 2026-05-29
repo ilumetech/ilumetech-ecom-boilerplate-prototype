@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -34,16 +35,19 @@ export class CreateProductDto {
   unitId: string;
 
   @IsNumber()
+  @Min(0)
   @Type(() => Number)
   sellingPrice: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
   @Type(() => Number)
   purchasePrice?: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
   @Type(() => Number)
   weightGram?: number;
 

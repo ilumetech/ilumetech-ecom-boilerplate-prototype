@@ -28,11 +28,10 @@ export class CreateProductOptionDto {
   @IsInt()
   position?: number;
 
-  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateProductOptionValueDto)
-  values?: CreateProductOptionValueDto[];
+  values: CreateProductOptionValueDto[];
 }
 
 export class UpdateProductOptionDto {
