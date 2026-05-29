@@ -14,10 +14,10 @@ import {
 
 import type {
   CreateProductDto,
-  CreateProductVariantDto,
   QueryProductDto,
   UpdateProductDto,
 } from './dto';
+import { buildVariantPricingData } from './product-variant.utils';
 
 type PublicProduct = Omit<Product, 'purchasePrice'>;
 
@@ -309,7 +309,7 @@ export class ProductService {
               productId,
               sku: v.sku,
               name: v.name,
-              ...this.buildVariantPricingData(v),
+              ...buildVariantPricingData(v),
               compareAtPrice: v.compareAtPrice,
               imageUrl: v.imageUrl,
               isActive: v.isActive ?? true,
@@ -447,7 +447,7 @@ export class ProductService {
                   where: { id: existingVariant.id },
                   data: {
                     name: v.name,
-                    ...this.buildVariantPricingData(v),
+                    ...buildVariantPricingData(v),
                     compareAtPrice: v.compareAtPrice,
                     imageUrl: v.imageUrl,
                     isActive: v.isActive ?? true,
@@ -465,7 +465,7 @@ export class ProductService {
                     productId: id,
                     sku: v.sku,
                     name: v.name,
-                    ...this.buildVariantPricingData(v),
+                    ...buildVariantPricingData(v),
                     compareAtPrice: v.compareAtPrice,
                     imageUrl: v.imageUrl,
                     isActive: v.isActive ?? true,
@@ -530,7 +530,7 @@ export class ProductService {
                   productId: id,
                   sku: v.sku,
                   name: v.name,
-                  ...this.buildVariantPricingData(v),
+                  ...buildVariantPricingData(v),
                   compareAtPrice: v.compareAtPrice,
                   imageUrl: v.imageUrl,
                   isActive: v.isActive ?? true,
@@ -553,7 +553,7 @@ export class ProductService {
               where: { id: existingVariant.id },
               data: {
                 name: v.name,
-                ...this.buildVariantPricingData(v),
+                ...buildVariantPricingData(v),
                 compareAtPrice: v.compareAtPrice,
                 imageUrl: v.imageUrl,
                 isActive: v.isActive ?? true,
@@ -571,7 +571,7 @@ export class ProductService {
                 productId: id,
                 sku: v.sku,
                 name: v.name,
-                ...this.buildVariantPricingData(v),
+                ...buildVariantPricingData(v),
                 compareAtPrice: v.compareAtPrice,
                 imageUrl: v.imageUrl,
                 isActive: v.isActive ?? true,
@@ -662,36 +662,6 @@ export class ProductService {
 
   private formatCode(prefix: string, seq: number): string {
     return `${prefix}-${String(seq).padStart(6, '0')}`;
-  }
-
-  private buildVariantPricingData(variant: CreateProductVariantDto) {
-    const finalPrice = variant.finalPrice ?? variant.price;
-
-    if (finalPrice > variant.price) {
-      throw new BadRequestException(
-        'Final price cannot be greater than base price',
-      );
-    }
-
-    if (variant.discountMode === 'AUTOMATIC' && !variant.discountType) {
-      throw new BadRequestException(
-        'Automatic discounts require a discount type',
-      );
-    }
-
-    if (variant.discountType && variant.discountValue == null) {
-      throw new BadRequestException(
-        'Discount value is required when discount type is provided',
-      );
-    }
-
-    return {
-      price: variant.price,
-      finalPrice,
-      discountType: variant.discountType,
-      discountValue: variant.discountValue,
-      discountMode: variant.discountMode,
-    };
   }
 
   private mapToResponse(product: ProductWithRelations): Product {

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateProductVariantDto, UpdateProductVariantDto } from './dto';
+import { buildVariantPricingData } from './product-variant.utils';
 
 @Injectable()
 export class ProductVariantService {
@@ -102,7 +103,7 @@ export class ProductVariantService {
         productId,
         sku: dto.sku,
         name: dto.name,
-        ...this.buildVariantPricingData(dto),
+        ...buildVariantPricingData(dto),
         compareAtPrice: dto.compareAtPrice,
         imageUrl: dto.imageUrl,
         isActive: dto.isActive ?? true,
@@ -231,36 +232,6 @@ export class ProductVariantService {
     });
   }
 
-  private buildVariantPricingData(variant: CreateProductVariantDto) {
-    const finalPrice = variant.finalPrice ?? variant.price;
-
-    if (finalPrice > variant.price) {
-      throw new BadRequestException(
-        'Final price cannot be greater than base price',
-      );
-    }
-
-    if (variant.discountMode === 'AUTOMATIC' && !variant.discountType) {
-      throw new BadRequestException(
-        'Automatic discounts require a discount type',
-      );
-    }
-
-    if (variant.discountType && variant.discountValue == null) {
-      throw new BadRequestException(
-        'Discount value is required when discount type is provided',
-      );
-    }
-
-    return {
-      price: variant.price,
-      finalPrice,
-      discountType: variant.discountType,
-      discountValue: variant.discountValue,
-      discountMode: variant.discountMode,
-    };
-  }
-
   private buildUpdateVariantPricingData(
     variant: Awaited<ReturnType<ProductVariantService['findOne']>>,
     dto: Pick<
@@ -276,7 +247,7 @@ export class ProductVariantService {
     const price = dto.price ?? variant.price.toNumber();
     const finalPrice = dto.finalPrice ?? price;
 
-    return this.buildVariantPricingData({
+    return buildVariantPricingData({
       sku: variant.sku,
       name: variant.name,
       price,
