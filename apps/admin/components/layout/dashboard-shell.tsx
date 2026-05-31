@@ -16,6 +16,7 @@ import {
   BgColorsOutlined,
   MenuOutlined,
   InboxOutlined,
+  GiftOutlined,
 } from "@ant-design/icons";
 import { PERMISSIONS } from "@ilumetech/types";
 
@@ -74,6 +75,12 @@ const NAV_CONFIG: NavItemConfig[] = [
     label: "Dashboard",
     permission: null,
     icon: <DashboardOutlined />,
+  },
+  {
+    key: "/promos",
+    label: "Promo",
+    permission: PERMISSIONS.PROMO_CODE.READ,
+    icon: <GiftOutlined />,
   },
   {
     key: "/users",

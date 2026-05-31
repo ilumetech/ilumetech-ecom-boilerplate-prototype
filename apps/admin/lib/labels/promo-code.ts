@@ -1,0 +1,15 @@
+export const PROMO_CODE_LABELS = {
+  code: "Kode Promo",
+  description: "Deskripsi",
+  discountType: "Tipe Diskon",
+  discountValue: "Nilai Diskon",
+  minOrderAmount: "Minimal Pembelian",
+  maxDiscount: "Maksimal Diskon (Capping)",
+  usageLimit: "Batas Penggunaan",
+  usedCount: "Jumlah Digunakan",
+  startDate: "Tanggal Mulai",
+  endDate: "Tanggal Berakhir",
+  isActive: "Status Aktif",
+  createdAt: "Waktu Dibuat",
+  updatedAt: "Terakhir Diperbarui",
+} as const;

@@ -7,5 +7,6 @@ export * from "./role.types";
 export * from "./stock.types";
 export * from "./unit.types";
 export * from "./user.types";
+export * from "./promo-code.types";
 export * from "./constants/permissions.constant";
 export * from "./constants/roles.constant";

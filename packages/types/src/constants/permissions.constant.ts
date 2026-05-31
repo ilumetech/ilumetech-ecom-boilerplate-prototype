@@ -43,6 +43,12 @@ export const PERMISSIONS = {
     UPDATE: "color:update",
     DELETE: "color:delete",
   },
+  PROMO_CODE: {
+    CREATE: "promo-code:create",
+    READ: "promo-code:read",
+    UPDATE: "promo-code:update",
+    DELETE: "promo-code:delete",
+  },
 } as const;
 
 export const ALL_PERMISSIONS: string[] = Object.values(PERMISSIONS).flatMap(

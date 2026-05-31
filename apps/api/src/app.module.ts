@@ -18,6 +18,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { ColorModule } from './color/color.module';
 import { UploadModule } from './upload/upload.module';
 import { StockModule } from './stock/stock.module';
+import { PromoCodeModule } from './promo-code/promo-code.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { StockModule } from './stock/stock.module';
     ColorModule,
     UploadModule,
     StockModule,
+    PromoCodeModule,
   ],
   controllers: [AppController],
   providers: [

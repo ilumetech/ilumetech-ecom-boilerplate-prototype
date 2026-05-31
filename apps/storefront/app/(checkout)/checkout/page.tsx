@@ -19,22 +19,62 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCart } from "@/lib/hooks/use-cart";
+import {
+  validatePromoCode,
+  usePromoCode,
+  type PromoCodeValidationResult,
+} from "@/lib/api/promo-code";
 
 export default function CheckoutPage() {
   const { items: cartItems, clearCart, isLoaded } = useCart();
   const router = useRouter();
   const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
 
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<PromoCodeValidationResult | null>(null);
+  const [isPromoValidating, setIsPromoValidating] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
   const subtotal = cartItems.reduce(
     (total, item) => total + item.price * item.quantity,
     0,
   );
+  const discount = appliedPromo ? appliedPromo.discountAmount : 0;
   const shipping = shippingMethod === "standard" ? 50000 : 100000;
-  const total = subtotal + shipping;
+  const total = Math.max(0, subtotal - discount + shipping);
 
-  const handlePayNow = () => {
-    clearCart();
-    router.push("/success");
+  const handleApplyPromo = async () => {
+    if (!promoCodeInput.trim()) return;
+    setIsPromoValidating(true);
+    setPromoError(null);
+    try {
+      const result = await validatePromoCode(promoCodeInput.trim(), subtotal);
+      setAppliedPromo(result);
+    } catch (e: any) {
+      setPromoError(e.message || "Failed to apply promo code");
+      setAppliedPromo(null);
+    } finally {
+      setIsPromoValidating(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoCodeInput("");
+    setPromoError(null);
+  };
+
+  const handlePayNow = async () => {
+    try {
+      if (appliedPromo) {
+        await usePromoCode(appliedPromo.code).catch((err) => {
+          console.error("Failed to increment coupon usage:", err);
+        });
+      }
+    } finally {
+      clearCart();
+      router.push("/success");
+    }
   };
 
   if (!isLoaded) {
@@ -516,18 +556,57 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="p-6 border-t border-zinc-200 bg-zinc-50/50 space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Discount code"
-                      className="h-12 rounded-none border-zinc-300 bg-white"
-                    />
-                    <Button
-                      variant="outline"
-                      className="h-12 rounded-none border-zinc-300 px-6 text-xs font-bold uppercase tracking-wide hover:bg-zinc-100"
-                    >
-                      Apply
-                    </Button>
-                  </div>
+                  {!appliedPromo ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Discount code"
+                          value={promoCodeInput}
+                          onChange={(e) => {
+                            setPromoCodeInput(e.target.value);
+                            setPromoError(null);
+                          }}
+                          className="h-12 rounded-none border-zinc-300 bg-white"
+                          disabled={isPromoValidating}
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={handleApplyPromo}
+                          disabled={isPromoValidating || !promoCodeInput.trim()}
+                          className="h-12 rounded-none border-zinc-300 px-6 text-xs font-bold uppercase tracking-wide hover:bg-zinc-100"
+                        >
+                          {isPromoValidating ? "Applying..." : "Apply"}
+                        </Button>
+                      </div>
+                      {promoError && (
+                        <p className="text-xs font-semibold text-red-600">
+                          {promoError}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between bg-zinc-100 p-3 border border-zinc-200">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                          Promo Code Applied
+                        </span>
+                        <span className="text-sm font-black uppercase tracking-wide">
+                          {appliedPromo.code}
+                          <span className="ml-2 text-xs font-semibold normal-case text-zinc-500">
+                            ({appliedPromo.discountType === "PERCENTAGE" ? `${appliedPromo.discountValue}% off` : `Rp ${appliedPromo.discountValue.toLocaleString("id-ID")} off`})
+                          </span>
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemovePromo}
+                        className="text-xs font-bold uppercase text-red-600 hover:text-red-800 hover:bg-transparent p-0 h-auto cursor-pointer"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  )}
 
                   <div className="space-y-2 pt-2 text-sm">
                     <div className="flex justify-between">
@@ -536,6 +615,14 @@ export default function CheckoutPage() {
                         {formatPrice(subtotal)}
                       </span>
                     </div>
+                    {appliedPromo && (
+                      <div className="flex justify-between text-emerald-600">
+                        <span>Discount ({appliedPromo.code})</span>
+                        <span className="font-semibold">
+                          -{formatPrice(appliedPromo.discountAmount)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-zinc-600">Shipping</span>
                       <span className="font-semibold">
