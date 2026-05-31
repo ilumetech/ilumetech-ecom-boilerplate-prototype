@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
-  Heart,
   RotateCcw,
   ShieldCheck,
   Truck,
@@ -10,6 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { WishlistButton } from "@/components/product/wishlist-button";
+import { ProductReviewsSection } from "@/components/product/product-reviews-section";
 import {
   Accordion,
   AccordionContent,
@@ -99,6 +100,12 @@ export default async function ProductDetailPage({
         </div>
       </section>
 
+      <Separator className="mx-auto max-w-7xl my-4" />
+
+      <ProductReviewsSection productId={product.id} />
+
+      <Separator className="mx-auto max-w-7xl my-4" />
+
       {relatedProducts.length > 0 ? (
         <section className="mx-auto max-w-7xl px-4 py-10 md:px-6 lg:py-14">
           <div className="flex items-center justify-between gap-4">
@@ -185,14 +192,7 @@ function ProductInfo({ product }: { product: StorefrontProduct }) {
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="shrink-0 rounded-none border-zinc-300"
-        >
-          <Heart className="h-5 w-5" />
-          <span className="sr-only">Add to wishlist</span>
-        </Button>
+        <WishlistButton productId={product.id} />
       </div>
 
       <ProductPurchasePanel product={product} />

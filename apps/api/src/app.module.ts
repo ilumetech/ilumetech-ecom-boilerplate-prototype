@@ -19,6 +19,8 @@ import { ColorModule } from './color/color.module';
 import { UploadModule } from './upload/upload.module';
 import { StockModule } from './stock/stock.module';
 import { PromoCodeModule } from './promo-code/promo-code.module';
+import { WishlistModule } from './wishlist/wishlist.module';
+import { ProductReviewModule } from './product-review/product-review.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { PromoCodeModule } from './promo-code/promo-code.module';
     UploadModule,
     StockModule,
     PromoCodeModule,
+    WishlistModule,
+    ProductReviewModule,
   ],
   controllers: [AppController],
   providers: [

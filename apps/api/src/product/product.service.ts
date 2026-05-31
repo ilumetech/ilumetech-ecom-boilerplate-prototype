@@ -730,7 +730,7 @@ export class ProductService {
     };
   }
 
-  private mapToPublicResponse(product: ProductWithRelations): PublicProduct {
+  public mapToPublicResponse(product: any): PublicProduct {
     const productResponse = this.mapToResponse(product);
 
     return {

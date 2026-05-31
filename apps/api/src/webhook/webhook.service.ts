@@ -34,11 +34,20 @@ export class WebhookService {
   private async routeEvent(event: WebhookEvent): Promise<void> {
     if (event.type === 'user.deleted') {
       const data = event.data;
-      if (data.id) await this.softDeleteUser(data.id);
+      if (data.id) {
+        await this.softDeleteUser(data.id);
+        await this.softDeleteCustomer(data.id);
+      }
       return;
     }
     if (event.type === 'user.created' || event.type === 'user.updated') {
-      await this.upsertUser(event.data);
+      const role = (event.data.public_metadata as any)?.role;
+      const isStaff = role === 'admin' || role === 'manager' || role === 'staff';
+      if (isStaff) {
+        await this.upsertUser(event.data);
+      } else {
+        await this.upsertCustomer(event.data);
+      }
     }
   }
 
@@ -67,8 +76,40 @@ export class WebhookService {
     });
   }
 
+  private async upsertCustomer(data: UserJSON): Promise<void> {
+    const primaryEmail = data.email_addresses.find(
+      (e) => e.id === data.primary_email_address_id,
+    );
+
+    const customerData = {
+      email: primaryEmail?.email_address ?? '',
+      username: data.username,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      imageUrl: data.image_url,
+      isActive: !data.banned,
+    };
+
+    await this.prisma.customer.upsert({
+      where: { id: data.id },
+      update: customerData,
+      create: {
+        id: data.id,
+        createdAt: new Date(data.created_at),
+        ...customerData,
+      },
+    });
+  }
+
   private async softDeleteUser(id: string): Promise<void> {
     await this.prisma.user.updateMany({
+      where: { id },
+      data: { isActive: false },
+    });
+  }
+
+  private async softDeleteCustomer(id: string): Promise<void> {
+    await this.prisma.customer.updateMany({
       where: { id },
       data: { isActive: false },
     });

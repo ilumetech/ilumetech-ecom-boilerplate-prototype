@@ -17,6 +17,7 @@ import {
   MenuOutlined,
   InboxOutlined,
   GiftOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import { PERMISSIONS } from "@ilumetech/types";
 
@@ -67,6 +68,12 @@ const NAV_CONFIG: NavItemConfig[] = [
         label: "Stok",
         permission: PERMISSIONS.STOCK.READ,
         icon: <InboxOutlined />,
+      },
+      {
+        key: "/reviews",
+        label: "Ulasan",
+        permission: PERMISSIONS.PRODUCT_REVIEW.READ,
+        icon: <MessageOutlined />,
       },
     ],
   },

@@ -1,95 +1,87 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
 import {
   Heart,
   ShoppingCart,
   Trash2,
   Search,
   ArrowRight,
-  Star,
-  ShoppingBag,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-
-// Mock data for wishlist
-const initialWishlistItems = [
-  {
-    id: "WISH-1",
-    name: "Premium Noise-Cancelling Headphones",
-    price: 249.99,
-    originalPrice: 299.99,
-    image:
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80",
-    inStock: true,
-    rating: 4.8,
-    reviews: 124,
-    category: "Electronics",
-  },
-  {
-    id: "WISH-2",
-    name: "Ergonomic Office Chair with Lumbar Support",
-    price: 199.5,
-    originalPrice: null,
-    image:
-      "https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?w=500&q=80",
-    inStock: false,
-    rating: 4.5,
-    reviews: 89,
-    category: "Furniture",
-  },
-  {
-    id: "WISH-3",
-    name: "Mechanical Keyboard - Cherry MX Brown",
-    price: 129.0,
-    originalPrice: 149.0,
-    image:
-      "https://images.unsplash.com/photo-1595225476474-87563907a212?w=500&q=80",
-    inStock: true,
-    rating: 4.9,
-    reviews: 312,
-    category: "Electronics",
-  },
-  {
-    id: "WISH-4",
-    name: "Minimalist Leather Backpack",
-    price: 89.99,
-    originalPrice: null,
-    image:
-      "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&q=80",
-    inStock: true,
-    rating: 4.6,
-    reviews: 56,
-    category: "Accessories",
-  },
-];
+import { getWishlist, toggleWishlist } from "@/lib/api/wishlist";
+import type { StorefrontProduct } from "@/lib/api/product";
 
 export default function WishlistPage() {
-  const [items, setItems] = useState(initialWishlistItems);
+  const { isSignedIn, getToken, isLoaded: isAuthLoaded } = useAuth();
+  const [items, setItems] = useState<StorefrontProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const fetchWishlist = async () => {
+    if (!isSignedIn) return;
+    setIsLoading(true);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const wishlist = await getWishlist(token);
+      setItems(wishlist);
+    } catch (err) {
+      console.error("Failed to load wishlist", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthLoaded) {
+      if (isSignedIn) {
+        fetchWishlist();
+      } else {
+        setIsLoading(false);
+      }
+    }
+  }, [isAuthLoaded, isSignedIn]);
+
+  const removeItem = async (id: string) => {
+    if (!isSignedIn) return;
+    try {
+      const token = await getToken();
+      if (!token) return;
+      await toggleWishlist(id, token);
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (err) {
+      console.error("Failed to remove item", err);
+    }
+  };
 
   const filteredItems = items.filter(
     (item) =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase()),
+      item.productCategory.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-
-  const removeItem = (id: string) => {
-    setItems(items.filter((item) => item.id !== id));
-  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
-    }).format(price * 15000); // Rough conversion for consistency with homepage Rp
+    })
+      .format(price)
+      .replace("Rp", "RP ");
   };
+
+  if (isLoading) {
+    return (
+      <div className="py-24 text-center text-xs font-bold uppercase tracking-widest text-zinc-400">
+        Loading your wishlist...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-12 animate-in fade-in duration-500">
@@ -111,7 +103,7 @@ export default function WishlistPage() {
           <Input
             type="search"
             placeholder="SEARCH WISHLIST..."
-            className="h-12 rounded-none border-zinc-200 pl-10 text-[10px] font-bold uppercase tracking-widest focus-visible:ring-0 focus-visible:border-black max-w-md"
+            className="h-12 rounded-none border-zinc-200 pl-10 text-[10px] font-bold uppercase tracking-widest focus-visible:ring-0 focus-visible:border-black max-w-md text-black"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -121,59 +113,67 @@ export default function WishlistPage() {
       {items.length > 0 ? (
         filteredItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="group relative flex flex-col border border-zinc-200 bg-white transition-all duration-300 hover:border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
-              >
-                <div className="relative aspect-[4/5] w-full overflow-hidden bg-zinc-100 grayscale hover:grayscale-0 transition-all duration-700">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  {!item.inStock && (
-                    <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex items-center justify-center">
-                      <span className="text-[10px] font-black uppercase tracking-widest px-4 py-2 bg-black text-white">
-                        Out of Stock
-                      </span>
-                    </div>
-                  )}
+            {filteredItems.map((item) => {
+              const image = item.images?.[0]?.url || "/placeholder-product.jpg";
+              const inStock = item.isActive;
 
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="absolute right-4 top-4 h-10 w-10 border border-transparent bg-white/80 flex items-center justify-center transition-all hover:border-black hover:bg-black hover:text-white"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+              return (
+                <div
+                  key={item.id}
+                  className="group relative flex flex-col border border-zinc-200 bg-white transition-all duration-300 hover:border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  <div className="relative aspect-[4/5] w-full overflow-hidden bg-zinc-100 grayscale hover:grayscale-0 transition-all duration-700">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={image}
+                      alt={item.name}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    {!inStock && (
+                      <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex items-center justify-center">
+                        <span className="text-[10px] font-black uppercase tracking-widest px-4 py-2 bg-black text-white">
+                          Out of Stock
+                        </span>
+                      </div>
+                    )}
 
-                <div className="p-6 flex flex-col gap-4">
-                  <div className="flex flex-col gap-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                      {item.category}
-                    </p>
-                    <h3 className="text-sm font-black uppercase tracking-tight line-clamp-1">
-                      <Link href={`/products/${item.id.toLowerCase()}`}>
-                        {item.name}
-                      </Link>
-                    </h3>
-                    <p className="mt-2 text-sm font-black tracking-tight">
-                      {formatPrice(item.price)}
-                    </p>
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="absolute right-4 top-4 h-10 w-10 border border-transparent bg-white/80 flex items-center justify-center transition-all hover:border-black hover:bg-black hover:text-white cursor-pointer"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
 
-                  <Button
-                    className="h-12 w-full rounded-none bg-black text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400"
-                    disabled={!item.inStock}
-                  >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Move to Cart
-                  </Button>
+                  <div className="p-6 flex flex-col gap-4">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                        {item.productCategory.name}
+                      </p>
+                      <h3 className="text-sm font-black uppercase tracking-tight line-clamp-1">
+                        <Link href={`/products/${item.slug}`}>
+                          {item.name}
+                        </Link>
+                      </h3>
+                      <p className="mt-2 text-sm font-black tracking-tight text-black">
+                        {formatPrice(item.sellingPrice)}
+                      </p>
+                    </div>
+
+                    <Button
+                      asChild
+                      className="h-12 w-full rounded-none bg-black text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400"
+                      disabled={!inStock}
+                    >
+                      <Link href={`/products/${item.slug}`} className="flex items-center justify-center gap-2">
+                        <ShoppingCart className="h-4 w-4" />
+                        View Product
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-zinc-200">
