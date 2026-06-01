@@ -50,7 +50,7 @@ export function CustomerDetailModal({
       open={isOpen}
       onCancel={onClose}
       footer={footer}
-      destroyOnClose={true}
+      destroyOnHidden={true}
     >
       {isLoading && (
         <div className="flex justify-center py-8">

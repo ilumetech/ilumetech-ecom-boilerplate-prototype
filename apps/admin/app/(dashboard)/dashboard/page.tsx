@@ -4,6 +4,7 @@ import { PermissionGate } from "@/components/auth/PermissionGate";
 import UserStatusChart from "@/components/dashboard/UserStatusChart";
 import ProductStatusChart from "@/components/dashboard/ProductStatusChart";
 import CategoryStatsChart from "@/components/dashboard/CategoryStatsChart";
+import SalesAnalyticsDashboard from "@/components/dashboard/SalesAnalyticsDashboard";
 
 export default function DashboardPage() {
   return (
@@ -12,6 +13,14 @@ export default function DashboardPage() {
         <h1 className="text-xl font-semibold m-0">Dashboard</h1>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="lg:col-span-2">
+          <PermissionGate permission={PERMISSIONS.ORDER.READ}>
+            <Suspense fallback={<div>Memuat...</div>}>
+              <SalesAnalyticsDashboard />
+            </Suspense>
+          </PermissionGate>
+        </div>
+
         <PermissionGate permission={PERMISSIONS.DASHBOARD.VIEW_USER_STATS}>
           <Suspense fallback={<div>Memuat...</div>}>
             <UserStatusChart />
@@ -35,3 +44,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

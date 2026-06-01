@@ -26,4 +26,10 @@ export class DashboardController {
   getCategoryStats() {
     return this.dashboardService.getCategoryStats();
   }
+
+  @Get('sales-stats')
+  @Permissions(PERMISSIONS.ORDER.READ)
+  getSalesStats() {
+    return this.dashboardService.getSalesStats();
+  }
 }

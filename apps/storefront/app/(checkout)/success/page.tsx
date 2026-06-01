@@ -1,65 +1,54 @@
 import Link from "next/link";
+import Image from "next/image";
+import { redirect } from "next/navigation";
 import {
   Check,
   Package,
   MapPin,
   Truck,
-  CreditCard,
-  ChevronRight,
   ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { Metadata } from "next";
+import { getCustomerOrder } from "@/lib/api/order-server";
 
 export const metadata: Metadata = {
   title: "Order Confirmed | BrandName",
   description: "Thank you for your order.",
 };
 
-const orderDetails = {
-  id: "ORD-8293-1029",
-  date: "May 14, 2026",
-  email: "customer@example.com",
-  status: "Confirmed",
-  shippingAddress: {
-    name: "John Doe",
-    address: "Jl. Sudirman No. 123",
-    city: "Jakarta Selatan",
-    province: "DKI Jakarta",
-    postalCode: "12190",
-    phone: "+62 812 3456 7890",
-  },
-  shippingMethod: "Standard Delivery (2-3 Business Days)",
-  paymentMethod: "Visa ending in 4242",
-  items: [
-    {
-      id: 1,
-      name: "PREMIUM BRUTALIST SNEAKERS",
-      colorway: "Carbon / Volt",
-      size: "42",
-      price: 1299000,
-      quantity: 1,
-      image: "/placeholder-product.jpg",
-    },
-    {
-      id: 2,
-      name: "ARCHITECTURAL TEE",
-      colorway: "Oatmeal",
-      size: "L",
-      price: 499000,
-      quantity: 2,
-      image: "/placeholder-product.jpg",
-    },
-  ],
-  subtotal: 2297000,
-  shipping: 50000,
-  tax: 0,
-  total: 2347000,
-};
+interface SuccessPageProps {
+  searchParams: Promise<{ orderId?: string }>;
+}
 
-export default function SuccessPage() {
+export default async function SuccessPage({ searchParams }: SuccessPageProps) {
+  const { orderId } = await searchParams;
+
+  if (!orderId) {
+    redirect("/");
+  }
+
+  let order;
+  try {
+    order = await getCustomerOrder(orderId);
+  } catch (error) {
+    console.error("Failed to fetch order details on SuccessPage:", error);
+    redirect("/");
+  }
+
+  const orderDate = new Date(order.createdAt).toLocaleDateString("id-ID", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const addressName = `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`.trim();
+  const addressLines = `${order.shippingAddress.addressLine1}${
+    order.shippingAddress.addressLine2 ? `, ${order.shippingAddress.addressLine2}` : ""
+  }`;
+
   return (
     <main className="min-h-screen bg-white text-black">
       {/* Success Header - Matching Checkout Flow */}
@@ -92,7 +81,7 @@ export default function SuccessPage() {
           </h1>
           <p className="text-zinc-500 text-lg max-w-md mx-auto">
             Thank you for shopping with us. We&apos;ve sent a confirmation email to{" "}
-            <span className="text-black font-bold">{orderDetails.email}</span>{" "}
+            <span className="text-black font-bold">{order.customerEmail}</span>{" "}
             with your order details.
           </p>
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -100,7 +89,7 @@ export default function SuccessPage() {
               asChild
               className="h-14 rounded-none bg-black px-10 text-sm font-bold uppercase tracking-widest text-white hover:bg-zinc-800 transition-all"
             >
-              <Link href="/track">Track Your Order</Link>
+              <Link href={`/account/orders/${order.id}`}>Track Your Order</Link>
             </Button>
             <Button
               asChild
@@ -125,26 +114,26 @@ export default function SuccessPage() {
                   <p className="text-zinc-400 uppercase font-bold text-[10px] tracking-widest mb-1">
                     Order Number
                   </p>
-                  <p className="font-bold">{orderDetails.id}</p>
+                  <p className="font-bold">{order.orderNumber}</p>
                 </div>
                 <div>
                   <p className="text-zinc-400 uppercase font-bold text-[10px] tracking-widest mb-1">
                     Order Date
                   </p>
-                  <p className="font-bold">{orderDetails.date}</p>
+                  <p className="font-bold">{orderDate}</p>
                 </div>
                 <div>
                   <p className="text-zinc-400 uppercase font-bold text-[10px] tracking-widest mb-1">
-                    Payment
+                    Payment Method
                   </p>
-                  <p className="font-bold">{orderDetails.paymentMethod}</p>
+                  <p className="font-bold">Dummy Payment</p>
                 </div>
                 <div>
                   <p className="text-zinc-400 uppercase font-bold text-[10px] tracking-widest mb-1">
                     Status
                   </p>
                   <span className="inline-block px-2 py-0.5 bg-zinc-100 text-[10px] font-black uppercase tracking-tighter">
-                    {orderDetails.status}
+                    {order.status}
                   </span>
                 </div>
               </div>
@@ -158,19 +147,21 @@ export default function SuccessPage() {
               <div className="border border-zinc-200 p-6 space-y-4 text-sm">
                 <div>
                   <p className="font-bold uppercase tracking-wide">
-                    {orderDetails.shippingAddress.name}
+                    {addressName}
                   </p>
                   <p className="text-zinc-600">
-                    {orderDetails.shippingAddress.address}
+                    {addressLines}
                   </p>
                   <p className="text-zinc-600">
-                    {orderDetails.shippingAddress.city},{" "}
-                    {orderDetails.shippingAddress.province}{" "}
-                    {orderDetails.shippingAddress.postalCode}
+                    {order.shippingAddress.city},{" "}
+                    {order.shippingAddress.province}{" "}
+                    {order.shippingAddress.postalCode}
                   </p>
-                  <p className="text-zinc-600 mt-2">
-                    {orderDetails.shippingAddress.phone}
-                  </p>
+                  {order.customerPhone && (
+                    <p className="text-zinc-600 mt-2">
+                      {order.customerPhone}
+                    </p>
+                  )}
                 </div>
                 <Separator className="bg-zinc-100" />
                 <div className="flex items-start gap-3">
@@ -180,7 +171,7 @@ export default function SuccessPage() {
                       Shipping Method
                     </p>
                     <p className="text-zinc-600 leading-relaxed">
-                      {orderDetails.shippingMethod}
+                      {order.shippingMethod || "Standard Delivery"}
                     </p>
                   </div>
                 </div>
@@ -197,30 +188,40 @@ export default function SuccessPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-zinc-100 max-h-[400px] overflow-y-auto scrollbar-thin">
-                {orderDetails.items.map((item) => (
+                {order.items.map((item) => (
                   <div
                     key={item.id}
                     className="p-4 flex items-center gap-4 hover:bg-zinc-50 transition-colors group"
                   >
                     <div className="relative h-20 w-16 shrink-0 bg-zinc-100 border border-zinc-200 overflow-hidden">
-                      {/* Image placeholder or real image would go here */}
-                      <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-zinc-300 uppercase rotate-12">
-                        Product
-                      </div>
+                      {item.imageUrl ? (
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.productName}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-zinc-300 uppercase rotate-12">
+                          Product
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-bold uppercase tracking-wide truncate group-hover:text-black transition-colors">
-                        {item.name}
+                        {item.productName}
                       </h3>
-                      <p className="text-xs text-zinc-500">
-                        {item.colorway} / {item.size}
-                      </p>
+                      {item.optionSummary && (
+                        <p className="text-xs text-zinc-500">
+                          {item.optionSummary}
+                        </p>
+                      )}
                       <p className="text-xs font-semibold mt-1">
                         QTY: {item.quantity}
                       </p>
                     </div>
                     <p className="text-sm font-black tracking-tight">
-                      {formatPrice(item.price * item.quantity)}
+                      {formatPrice(item.unitPrice * item.quantity)}
                     </p>
                   </div>
                 ))}
@@ -230,19 +231,21 @@ export default function SuccessPage() {
                 <div className="flex justify-between">
                   <span className="text-zinc-500 font-medium">Subtotal</span>
                   <span className="font-bold">
-                    {formatPrice(orderDetails.subtotal)}
+                    {formatPrice(order.subtotalAmount)}
                   </span>
                 </div>
+                {order.discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-600">
+                    <span className="font-medium">Discount ({order.promoCode})</span>
+                    <span className="font-bold">
+                      -{formatPrice(order.discountAmount)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-zinc-500 font-medium">Shipping</span>
                   <span className="font-bold">
-                    {formatPrice(orderDetails.shipping)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500 font-medium">Tax</span>
-                  <span className="font-bold">
-                    {formatPrice(orderDetails.tax)}
+                    {formatPrice(order.shippingAmount)}
                   </span>
                 </div>
               </div>
@@ -256,7 +259,7 @@ export default function SuccessPage() {
                     IDR
                   </span>
                   <span className="text-3xl font-black tracking-tighter">
-                    {formatPrice(orderDetails.total)}
+                    {formatPrice(order.totalAmount)}
                   </span>
                 </div>
               </div>

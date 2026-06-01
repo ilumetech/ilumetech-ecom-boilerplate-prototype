@@ -24,16 +24,51 @@ import {
   usePromoCode,
   type PromoCodeValidationResult,
 } from "@/lib/api/promo-code";
+import { useAuth, useUser } from "@clerk/nextjs";
+import { useEffect } from "react";
+import { createOrder } from "@/lib/api/order";
 
 export default function CheckoutPage() {
   const { items: cartItems, clearCart, isLoaded } = useCart();
   const router = useRouter();
+  const { isSignedIn, getToken, isLoaded: isAuthLoaded } = useAuth();
+  const { user } = useUser();
+
   const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
 
   const [promoCodeInput, setPromoCodeInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<PromoCodeValidationResult | null>(null);
   const [isPromoValidating, setIsPromoValidating] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
+
+  // Form states
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [province, setProvince] = useState("JKT");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("ID");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Protect route
+  useEffect(() => {
+    if (isAuthLoaded && !isSignedIn) {
+      router.push(`/sign-in?redirect_url=/checkout`);
+    }
+  }, [isAuthLoaded, isSignedIn, router]);
+
+  // Pre-populate user details
+  useEffect(() => {
+    if (user) {
+      setEmail(user.primaryEmailAddress?.emailAddress || "");
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+    }
+  }, [user]);
 
   const subtotal = cartItems.reduce(
     (total, item) => total + item.price * item.quantity,
@@ -65,19 +100,65 @@ export default function CheckoutPage() {
   };
 
   const handlePayNow = async () => {
+    if (!isSignedIn) {
+      router.push(`/sign-in?redirect_url=/checkout`);
+      return;
+    }
+
+    if (!email || !firstName || !lastName || !addressLine1 || !city || !province || !postalCode) {
+      alert("Please fill in all required shipping and contact details.");
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      if (appliedPromo) {
-        await usePromoCode(appliedPromo.code).catch((err) => {
-          console.error("Failed to increment coupon usage:", err);
-        });
+      const token = await getToken();
+      if (!token) throw new Error("Could not retrieve authentication token.");
+
+      const orderItems = cartItems
+        .filter((item) => item.variantId)
+        .map((item) => ({
+          productVariantId: item.variantId!,
+          quantity: item.quantity,
+        }));
+
+      if (orderItems.length === 0) {
+        throw new Error("No valid variants in the cart to place an order.");
       }
-    } finally {
+
+      const orderInput = {
+        items: orderItems,
+        customerEmail: email,
+        customerName: `${firstName} ${lastName}`.trim(),
+        customerPhone: phone || undefined,
+        shippingAddress: {
+          firstName,
+          lastName,
+          addressLine1,
+          addressLine2: addressLine2 || undefined,
+          city,
+          province,
+          postalCode,
+          country,
+        },
+        shippingMethod: shippingMethod === "standard" ? "Standard Delivery" : "Express Delivery",
+        shippingAmount: shipping,
+        promoCode: appliedPromo?.code || undefined,
+      };
+
+      const order = await createOrder(orderInput, token);
+
       clearCart();
-      router.push("/success");
+      router.push(`/success?orderId=${order.id}`);
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || "Failed to place order. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (!isLoaded) {
+  if (!isLoaded || !isAuthLoaded) {
     return (
       <main className="min-h-screen bg-zinc-50 text-black flex flex-col">
         <header className="border-b border-zinc-200 bg-white">
@@ -192,6 +273,9 @@ export default function CheckoutPage() {
                   <Input
                     type="email"
                     placeholder="Email or mobile phone number"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                     className="h-12 rounded-none border-zinc-300 bg-white"
                   />
                 </div>
@@ -222,7 +306,7 @@ export default function CheckoutPage() {
                   <Label htmlFor="country" className="sr-only">
                     Country/Region
                   </Label>
-                  <Select defaultValue="ID">
+                  <Select value={country} onValueChange={setCountry}>
                     <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white">
                       <SelectValue placeholder="Country/Region" />
                     </SelectTrigger>
@@ -242,6 +326,9 @@ export default function CheckoutPage() {
                     <Input
                       id="firstName"
                       placeholder="First name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
                       className="h-12 rounded-none border-zinc-300 bg-white"
                     />
                   </div>
@@ -252,6 +339,9 @@ export default function CheckoutPage() {
                     <Input
                       id="lastName"
                       placeholder="Last name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
                       className="h-12 rounded-none border-zinc-300 bg-white"
                     />
                   </div>
@@ -275,6 +365,9 @@ export default function CheckoutPage() {
                   <Input
                     id="address"
                     placeholder="Address"
+                    value={addressLine1}
+                    onChange={(e) => setAddressLine1(e.target.value)}
+                    required
                     className="h-12 rounded-none border-zinc-300 bg-white"
                   />
                 </div>
@@ -286,6 +379,8 @@ export default function CheckoutPage() {
                   <Input
                     id="apartment"
                     placeholder="Apartment, suite, etc. (optional)"
+                    value={addressLine2}
+                    onChange={(e) => setAddressLine2(e.target.value)}
                     className="h-12 rounded-none border-zinc-300 bg-white"
                   />
                 </div>
@@ -298,6 +393,9 @@ export default function CheckoutPage() {
                     <Input
                       id="city"
                       placeholder="City"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      required
                       className="h-12 rounded-none border-zinc-300 bg-white"
                     />
                   </div>
@@ -305,7 +403,7 @@ export default function CheckoutPage() {
                     <Label htmlFor="province" className="sr-only">
                       Province
                     </Label>
-                    <Select>
+                    <Select value={province} onValueChange={setProvince}>
                       <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white">
                         <SelectValue placeholder="Province" />
                       </SelectTrigger>
@@ -323,6 +421,9 @@ export default function CheckoutPage() {
                     <Input
                       id="postalCode"
                       placeholder="Postal code"
+                      value={postalCode}
+                      onChange={(e) => setPostalCode(e.target.value)}
+                      required
                       className="h-12 rounded-none border-zinc-300 bg-white"
                     />
                   </div>
@@ -335,7 +436,9 @@ export default function CheckoutPage() {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="Phone"
+                    placeholder="Phone (optional)"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     className="h-12 rounded-none border-zinc-300 bg-white"
                   />
                 </div>
@@ -499,9 +602,10 @@ export default function CheckoutPage() {
               <Button
                 type="button"
                 onClick={handlePayNow}
-                className="h-14 rounded-none bg-black px-8 text-sm font-bold uppercase tracking-widest text-white hover:bg-zinc-800"
+                disabled={isSubmitting}
+                className="h-14 rounded-none bg-black px-8 text-sm font-bold uppercase tracking-widest text-white hover:bg-zinc-800 disabled:bg-zinc-700 disabled:cursor-not-allowed"
               >
-                Pay Now
+                {isSubmitting ? "Placing Order..." : "Pay Now"}
               </Button>
             </div>
           </div>

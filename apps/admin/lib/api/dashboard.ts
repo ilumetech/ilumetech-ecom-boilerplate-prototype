@@ -39,4 +39,44 @@ async function getCategoryStats(): Promise<CategoryStatsItem[]> {
   return response.data.data;
 }
 
-export const dashboardApi = { getStats, getProductStats, getCategoryStats };
+export interface SalesTrendItem {
+  date: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface TopProductItem {
+  name: string;
+  quantity: number;
+  revenue: number;
+}
+
+export interface PromoUsageItem {
+  code: string;
+  count: number;
+  discount: number;
+}
+
+export interface SalesStats {
+  totalRevenue: number;
+  totalOrders: number;
+  averageOrderValue: number;
+  salesTrend: SalesTrendItem[];
+  topProducts: TopProductItem[];
+  promoUsage: PromoUsageItem[];
+}
+
+async function getSalesStats(): Promise<SalesStats> {
+  const response = await apiClient.get<ApiResponse<SalesStats>>(
+    "/dashboard/sales-stats",
+  );
+  return response.data.data;
+}
+
+export const dashboardApi = {
+  getStats,
+  getProductStats,
+  getCategoryStats,
+  getSalesStats,
+};
+

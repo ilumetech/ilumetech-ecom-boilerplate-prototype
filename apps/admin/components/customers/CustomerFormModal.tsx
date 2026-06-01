@@ -128,7 +128,7 @@ export function CustomerFormModal({
       onCancel={handleCancelRequest}
       footer={footer}
       mask={{ closable: false }}
-      destroyOnClose={true}
+      destroyOnHidden={true}
     >
       <Form
         form={form}

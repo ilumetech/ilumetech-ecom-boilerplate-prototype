@@ -14,5 +14,6 @@ import { PermissionsGuard } from '../common/guards';
     ProductVariantService,
     PermissionsGuard,
   ],
+  exports: [ProductService],
 })
 export class ProductModule {}
