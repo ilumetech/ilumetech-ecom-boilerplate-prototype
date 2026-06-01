@@ -21,6 +21,8 @@ import { StockModule } from './stock/stock.module';
 import { PromoCodeModule } from './promo-code/promo-code.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { ProductReviewModule } from './product-review/product-review.module';
+import { CustomerModule } from './customer/customer.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { ProductReviewModule } from './product-review/product-review.module';
     PromoCodeModule,
     WishlistModule,
     ProductReviewModule,
+    CustomerModule,
+    OrderModule,
   ],
   controllers: [AppController],
   providers: [

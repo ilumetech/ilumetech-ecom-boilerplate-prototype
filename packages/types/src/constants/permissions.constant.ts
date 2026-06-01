@@ -54,6 +54,15 @@ export const PERMISSIONS = {
     UPDATE: "product-review:update",
     DELETE: "product-review:delete",
   },
+  CUSTOMER: {
+    READ: "customer:read",
+    UPDATE: "customer:update",
+    DELETE: "customer:delete",
+  },
+  ORDER: {
+    READ: "order:read",
+    UPDATE: "order:update",
+  },
 } as const;
 
 export const ALL_PERMISSIONS: string[] = Object.values(PERMISSIONS).flatMap(

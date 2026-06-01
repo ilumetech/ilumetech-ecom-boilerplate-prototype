@@ -18,6 +18,7 @@ import {
   InboxOutlined,
   GiftOutlined,
   MessageOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { PERMISSIONS } from "@ilumetech/types";
 
@@ -88,6 +89,12 @@ const NAV_CONFIG: NavItemConfig[] = [
     label: "Promo",
     permission: PERMISSIONS.PROMO_CODE.READ,
     icon: <GiftOutlined />,
+  },
+  {
+    key: "/customers",
+    label: "Pelanggan",
+    permission: PERMISSIONS.CUSTOMER.READ,
+    icon: <UserOutlined />,
   },
   {
     key: "/users",

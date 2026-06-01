@@ -1,5 +1,7 @@
 export * from "./api.types";
 export * from "./color.types";
+export * from "./customer.types";
+export * from "./order.types";
 export * from "./product-category.types";
 export * from "./product.types";
 export * from "./query.types";
