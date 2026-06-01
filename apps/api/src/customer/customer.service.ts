@@ -51,18 +51,40 @@ export class CustomerService {
   }
 
   async findOne(customerId: string): Promise<AppCustomer> {
-    const customer = await this.prisma.customer.findUnique({
+    let customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
     });
-    if (!customer) throw new NotFoundException(`Customer ${customerId} not found`);
+
+    if (!customer) {
+      try {
+        const clerkUser = await this.clerk.users.getUser(customerId);
+        const primaryEmail = clerkUser.emailAddresses.find(
+          (address) => address.id === clerkUser.primaryEmailAddressId,
+        );
+
+        customer = await this.prisma.customer.create({
+          data: {
+            id: customerId,
+            email: primaryEmail?.emailAddress ?? '',
+            username: clerkUser.username ?? null,
+            firstName: clerkUser.firstName ?? null,
+            lastName: clerkUser.lastName ?? null,
+            imageUrl: clerkUser.imageUrl ?? null,
+            isActive: !clerkUser.banned,
+          },
+        });
+      } catch (error) {
+        console.error('Failed to auto-create customer from Clerk:', error);
+        throw new NotFoundException(`Customer ${customerId} not found`);
+      }
+    }
+
     return this.mapPrismaCustomer(customer);
   }
 
   async update(customerId: string, dto: UpdateCustomerDto): Promise<AppCustomer> {
-    const customer = await this.prisma.customer.findUnique({
-      where: { id: customerId },
-    });
-    if (!customer) throw new NotFoundException(`Customer ${customerId} not found`);
+    // Ensure customer is synced to local DB from Clerk before updating
+    await this.findOne(customerId);
 
     await this.applyClerkUpdates(customerId, dto);
 
