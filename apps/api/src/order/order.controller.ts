@@ -1,9 +1,20 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { PERMISSIONS } from '@ilumetech/types';
-import { Permissions } from '../common/decorators/permissions.decorator';
+import {
+  GetCurrentUser,
+  Permissions,
+} from '../common/decorators';
 import { ClerkAuthGuard } from '../common/guards/clerk-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { QueryOrderDto } from './dto';
+import { QueryOrderDto, UpdateOrderStatusDto } from './dto';
 import { OrderService } from './order.service';
 
 @Controller('orders')
@@ -21,6 +32,17 @@ export class OrderController {
   @Permissions(PERMISSIONS.ORDER.READ)
   async findOne(@Param('id') id: string) {
     const order = await this.orderService.findOne(id);
+    return { data: order };
+  }
+
+  @Patch(':id/status')
+  @Permissions(PERMISSIONS.ORDER.UPDATE)
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateOrderStatusDto,
+    @GetCurrentUser() actorId: string,
+  ) {
+    const order = await this.orderService.updateStatus(id, dto.status, actorId);
     return { data: order };
   }
 }

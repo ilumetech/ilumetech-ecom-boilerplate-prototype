@@ -10,6 +10,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import {
   DashboardOutlined,
   ShoppingOutlined,
+  ShoppingCartOutlined,
   UnorderedListOutlined,
   TagsOutlined,
   TeamOutlined,
@@ -83,6 +84,12 @@ const NAV_CONFIG: NavItemConfig[] = [
     label: "Dashboard",
     permission: null,
     icon: <DashboardOutlined />,
+  },
+  {
+    key: "/orders",
+    label: "Pesanan",
+    permission: PERMISSIONS.ORDER.READ,
+    icon: <ShoppingCartOutlined />,
   },
   {
     key: "/promos",

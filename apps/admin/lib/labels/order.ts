@@ -1,0 +1,18 @@
+export const ORDER_LABELS = {
+  orderNumber: "Nomor Pesanan",
+  customerName: "Pelanggan",
+  customerEmail: "Email",
+  customerPhone: "Telepon",
+  status: "Status",
+  subtotalAmount: "Subtotal",
+  discountAmount: "Diskon",
+  shippingAmount: "Ongkir",
+  totalAmount: "Total",
+  promoCode: "Kode Promo",
+  shippingMethod: "Metode Pengiriman",
+  shippingAddress: "Alamat Pengiriman",
+  items: "Item Pesanan",
+  createdAt: "Tanggal Pesanan",
+  updatedAt: "Terakhir Diubah",
+  actions: "Aksi",
+} as const;

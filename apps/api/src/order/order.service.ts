@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import {
   DiscountType,
+  OrderStatus,
   Prisma,
   StockMovementType,
   StockReferenceType,
@@ -195,6 +196,41 @@ export class OrderService {
     });
 
     if (!order) throw new NotFoundException(`Order ${id} not found`);
+
+    return this.mapToResponse(order);
+  }
+
+  async updateStatus(
+    id: string,
+    nextStatus: OrderStatus,
+    actorId: string,
+  ): Promise<Order> {
+    const order = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.order.findUnique({
+        where: { id },
+        include: { items: true },
+      });
+
+      if (!existing) throw new NotFoundException(`Order ${id} not found`);
+
+      this.validateStatusTransition(existing.status, nextStatus);
+
+      if (
+        existing.status !== nextStatus &&
+        nextStatus === OrderStatus.CANCELLED
+      ) {
+        await this.restoreOrderStock(tx, existing, actorId);
+        if (existing.promoCode) {
+          await this.decrementPromoUsage(tx, existing.promoCode);
+        }
+      }
+
+      return tx.order.update({
+        where: { id },
+        data: { status: nextStatus },
+        include: { items: true },
+      });
+    });
 
     return this.mapToResponse(order);
   }
@@ -407,6 +443,55 @@ export class OrderService {
     });
   }
 
+  private validateStatusTransition(
+    currentStatus: OrderStatus,
+    nextStatus: OrderStatus,
+  ): void {
+    if (currentStatus === nextStatus) return;
+
+    const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+      [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
+      [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
+      [OrderStatus.PROCESSING]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+      [OrderStatus.COMPLETED]: [],
+      [OrderStatus.CANCELLED]: [],
+    };
+
+    if (!allowedTransitions[currentStatus].includes(nextStatus)) {
+      throw new BadRequestException(
+        `Cannot change order status from ${currentStatus} to ${nextStatus}`,
+      );
+    }
+  }
+
+  private async restoreOrderStock(
+    tx: Prisma.TransactionClient,
+    order: OrderWithItems,
+    actorId: string,
+  ): Promise<void> {
+    for (const item of order.items) {
+      const updatedVariant = await tx.productVariant.update({
+        where: { id: item.productVariantId },
+        data: { stockOnHand: { increment: item.quantity } },
+        select: { stockOnHand: true },
+      });
+
+      await tx.stockMovement.create({
+        data: {
+          productVariantId: item.productVariantId,
+          type: StockMovementType.IN,
+          quantity: item.quantity,
+          balanceBefore: updatedVariant.stockOnHand - item.quantity,
+          balanceAfter: updatedVariant.stockOnHand,
+          referenceType: StockReferenceType.ORDER,
+          referenceId: order.id,
+          reason: 'Order cancelled',
+          actorId,
+        },
+      });
+    }
+  }
+
   private async incrementPromoUsage(
     tx: Prisma.TransactionClient,
     code: string,
@@ -427,6 +512,21 @@ export class OrderService {
     if (result.count === 0) {
       throw new BadRequestException('Batas penggunaan kode promo telah habis');
     }
+  }
+
+  private async decrementPromoUsage(
+    tx: Prisma.TransactionClient,
+    code: string,
+  ): Promise<void> {
+    await tx.promoCode.updateMany({
+      where: {
+        code,
+        usedCount: { gt: 0 },
+      },
+      data: {
+        usedCount: { decrement: 1 },
+      },
+    });
   }
 
   private buildOptionSummary(variant: CheckoutVariant): string | null {
