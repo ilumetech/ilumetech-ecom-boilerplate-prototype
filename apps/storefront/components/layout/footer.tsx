@@ -43,7 +43,7 @@ const customerServiceLinks = [
   { label: "How to Order", href: "/how-to-order" },
   { label: "Shipping Info", href: "/shipping" },
   { label: "Returns & Refund", href: "/returns" },
-  { label: "Track Order", href: "/track" },
+  { label: "Track Order", href: "/account/orders" },
 ];
 
 const informationLinks = [

@@ -10,7 +10,6 @@ import {
   User,
   ShoppingBag,
   MessageCircle,
-  Package,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,14 +25,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/lib/hooks/use-cart";
 import CartDrawer from "@/components/cart/cart-drawer";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 
 
 
@@ -58,6 +56,7 @@ export function Header(_props: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const { cartCount: dynamicCartCount, isLoaded } = useCart();
   const { isSignedIn, signOut } = useAuth();
+  const { user } = useUser();
 
   // Sync state with URL search parameter
   useEffect(() => {
@@ -95,13 +94,6 @@ export function Header(_props: HeaderProps) {
             >
               <MessageCircle className="h-3.5 w-3.5" />
               Order via WhatsApp
-            </Link>
-            <Link
-              href="/track"
-              className="flex items-center gap-2 hover:opacity-70"
-            >
-              <Package className="h-3.5 w-3.5" />
-              Track Order
             </Link>
           </div>
         </div>
@@ -145,20 +137,31 @@ export function Header(_props: HeaderProps) {
                   <MessageCircle className="h-4 w-4" />
                   Order via WhatsApp
                 </Link>
-                <Link href="/track" className="flex items-center gap-2">
-                  <Package className="h-4 w-4" />
-                  Track Order
-                </Link>
                 <Separator className="my-2" />
                 {isSignedIn ? (
                   <>
-                    <Link href="/account/profile" className="flex items-center gap-2 font-medium">
-                      <User className="h-4 w-4" />
-                      My Account
+                    <Link 
+                      href="/account/profile" 
+                      className="flex items-center gap-3 p-3 border border-zinc-200 bg-white transition-all hover:border-black rounded-none w-full"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 font-bold">
+                        {user?.firstName?.charAt(0) || user?.username?.charAt(0) || "U"}
+                      </div>
+                      <div className="flex flex-col text-left overflow-hidden">
+                        <span className="font-bold text-[10px] uppercase tracking-wider text-zinc-400">
+                          My Account & Profile
+                        </span>
+                        <span className="font-black text-sm text-black truncate mt-0.5">
+                          {user?.fullName || user?.firstName || "Customer"}
+                        </span>
+                        <span className="text-[10px] font-medium text-zinc-500 truncate mt-0.5 lowercase">
+                          {user?.primaryEmailAddress?.emailAddress || ""}
+                        </span>
+                      </div>
                     </Link>
                     <button
                       onClick={() => signOut()}
-                      className="text-red-600 font-medium cursor-pointer w-full text-left flex items-center gap-2 border-none bg-transparent p-0"
+                      className="text-red-600 font-medium cursor-pointer w-full text-left flex items-center gap-2 border-none bg-transparent p-0 mt-3"
                     >
                       <X className="h-4 w-4" />
                       Sign Out
@@ -216,12 +219,26 @@ export function Header(_props: HeaderProps) {
                       <span className="sr-only">Account</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
+                  <DropdownMenuContent align="end" className="w-64 p-2 rounded-none border-zinc-200">
                     <DropdownMenuItem asChild>
-                      <Link href="/account/profile" className="cursor-pointer">
-                        Profile
+                      <Link
+                        href="/account/profile"
+                        className="flex items-center gap-3 p-3 rounded-none hover:bg-zinc-50 transition-colors cursor-pointer outline-none w-full"
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 font-bold">
+                          {user?.firstName?.charAt(0) || user?.username?.charAt(0) || "U"}
+                        </div>
+                        <div className="flex flex-col text-left overflow-hidden">
+                          <span className="font-bold text-[10px] uppercase tracking-wider text-zinc-400">
+                            My Account & Profile
+                          </span>
+                          <span className="font-black text-sm text-black truncate mt-0.5">
+                            {user?.fullName || user?.firstName || "Customer"}
+                          </span>
+                          <span className="text-[10px] font-medium text-zinc-500 truncate mt-0.5 lowercase">
+                            {user?.primaryEmailAddress?.emailAddress || ""}
+                          </span>
+                        </div>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>

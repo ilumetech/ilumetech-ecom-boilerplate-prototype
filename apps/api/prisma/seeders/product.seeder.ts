@@ -31,7 +31,7 @@ export async function seedProducts(prisma: PrismaClient) {
 
   await prisma.productCounter.upsert({
     where: { prefix: 'PRD' },
-    update: { lastSeq: 1 },
+    update: {},
     create: { prefix: 'PRD', lastSeq: 1 },
   });
 

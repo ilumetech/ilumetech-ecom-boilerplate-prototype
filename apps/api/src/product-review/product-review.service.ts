@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { ReviewStatus } from '@prisma/client';
+import { ReviewStatus, OrderStatus } from '@prisma/client';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { QueryReviewDto } from './dto/query-review.dto';
 import { buildPaginationMeta, buildPrismaQuery } from '../common/utils';
@@ -8,6 +8,21 @@ import { buildPaginationMeta, buildPrismaQuery } from '../common/utils';
 @Injectable()
 export class ProductReviewService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async checkCanReview(customerId: string, productId: string): Promise<boolean> {
+    const count = await this.prisma.order.count({
+      where: {
+        customerId,
+        status: OrderStatus.COMPLETED,
+        items: {
+          some: {
+            productId,
+          },
+        },
+      },
+    });
+    return count > 0;
+  }
 
   async submit(customerId: string, dto: CreateReviewDto) {
     const product = await this.prisma.product.findUnique({
@@ -17,7 +32,35 @@ export class ProductReviewService {
       throw new NotFoundException(`Product with ID ${dto.productId} not found`);
     }
 
+    const canReview = await this.checkCanReview(customerId, dto.productId);
+    if (!canReview) {
+      throw new BadRequestException(
+        'You can only review products you have successfully purchased.',
+      );
+    }
+
     await this.ensureCustomerExists(customerId);
+
+    const existingReview = await this.prisma.productReview.findFirst({
+      where: {
+        customerId,
+        productId: dto.productId,
+      },
+    });
+
+    if (existingReview) {
+      return this.prisma.productReview.update({
+        where: { id: existingReview.id },
+        data: {
+          rating: dto.rating,
+          comment: dto.comment,
+          status: ReviewStatus.PENDING,
+        },
+        include: {
+          customer: true,
+        },
+      });
+    }
 
     const review = await this.prisma.productReview.create({
       data: {
