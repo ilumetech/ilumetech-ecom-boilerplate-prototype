@@ -471,7 +471,7 @@ export default function CheckoutPage() {
                         setCity(cities[0] || "");
                       }}
                     >
-                      <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white text-left">
+                      <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white text-left text-base md:text-sm">
                         <SelectValue placeholder="Province" />
                       </SelectTrigger>
                       <SelectContent className="rounded-none border-zinc-200 max-h-[250px] overflow-y-auto">
@@ -488,7 +488,7 @@ export default function CheckoutPage() {
                       City
                     </Label>
                     <Select value={city} onValueChange={setCity}>
-                      <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white text-left">
+                      <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white text-left text-base md:text-sm">
                         <SelectValue placeholder="City" />
                       </SelectTrigger>
                       <SelectContent className="rounded-none border-zinc-200 max-h-[250px] overflow-y-auto">

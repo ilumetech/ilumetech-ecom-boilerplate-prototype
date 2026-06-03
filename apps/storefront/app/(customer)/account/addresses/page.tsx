@@ -354,7 +354,7 @@ export default function AddressesPage() {
                   />
                 </div>
 
-                 <div className="grid grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5 col-span-1">
                     <Label htmlFor="province" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Province *</Label>
                     <Select
@@ -365,7 +365,7 @@ export default function AddressesPage() {
                         setCity(cities[0] || "");
                       }}
                     >
-                      <SelectTrigger className="h-11 w-full rounded-none border-zinc-300 bg-white text-left">
+                      <SelectTrigger className="h-11 w-full rounded-none border-zinc-300 bg-white text-left text-base md:text-sm">
                         <SelectValue placeholder="Province" />
                       </SelectTrigger>
                       <SelectContent className="rounded-none border-zinc-200 max-h-[250px] overflow-y-auto">
@@ -380,7 +380,7 @@ export default function AddressesPage() {
                   <div className="space-y-1.5 col-span-1">
                     <Label htmlFor="city" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">City *</Label>
                     <Select value={city} onValueChange={setCity}>
-                      <SelectTrigger className="h-11 w-full rounded-none border-zinc-300 bg-white text-left">
+                      <SelectTrigger className="h-11 w-full rounded-none border-zinc-300 bg-white text-left text-base md:text-sm">
                         <SelectValue placeholder="City" />
                       </SelectTrigger>
                       <SelectContent className="rounded-none border-zinc-200 max-h-[250px] overflow-y-auto">
