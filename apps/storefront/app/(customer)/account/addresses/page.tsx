@@ -23,6 +23,7 @@ import {
   setDefaultAddress,
   type CustomerAddress,
 } from "@/lib/api/address";
+import { INDONESIA_DATA, normalizeProvince } from "@/lib/indonesia-data";
 
 export default function AddressesPage() {
   const { isSignedIn, getToken, isLoaded: isAuthLoaded } = useAuth();
@@ -38,8 +39,8 @@ export default function AddressesPage() {
   const [lastName, setLastName] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
-  const [city, setCity] = useState("");
-  const [province, setProvince] = useState("JKT");
+  const [city, setCity] = useState("Jakarta Pusat");
+  const [province, setProvince] = useState("DKI Jakarta");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("ID");
   const [phone, setPhone] = useState("");
@@ -75,8 +76,8 @@ export default function AddressesPage() {
     setLastName("");
     setAddressLine1("");
     setAddressLine2("");
-    setCity("");
-    setProvince("JKT");
+    setProvince("DKI Jakarta");
+    setCity("Jakarta Pusat");
     setPostalCode("");
     setCountry("ID");
     setPhone("");
@@ -90,8 +91,9 @@ export default function AddressesPage() {
     setLastName(address.lastName);
     setAddressLine1(address.addressLine1);
     setAddressLine2(address.addressLine2 || "");
+    const normProvince = normalizeProvince(address.province);
+    setProvince(normProvince);
     setCity(address.city);
-    setProvince(address.province);
     setPostalCode(address.postalCode);
     setCountry(address.country);
     setPhone(address.phone || "");
@@ -103,7 +105,7 @@ export default function AddressesPage() {
     e.preventDefault();
     if (!isSignedIn) return;
     
-    if (!firstName || !lastName || !addressLine1 || !city || !province || !postalCode) {
+    if (!firstName || !lastName || !addressLine1 || !city || !province || !postalCode || !phone) {
       alert("Please fill in all required fields.");
       return;
     }
@@ -122,7 +124,7 @@ export default function AddressesPage() {
         province,
         postalCode,
         country,
-        phone: phone || undefined,
+        phone,
         isDefault,
       };
 
@@ -327,25 +329,13 @@ export default function AddressesPage() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="country" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Country/Region *</Label>
-                  <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger className="h-11 w-full rounded-none border-zinc-300 bg-white">
-                      <SelectValue placeholder="Country/Region" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-none border-zinc-200">
-                      <SelectItem value="ID">Indonesia</SelectItem>
-                      <SelectItem value="SG">Singapore</SelectItem>
-                      <SelectItem value="MY">Malaysia</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                <div className="space-y-1.5">
+
+                 <div className="space-y-1.5">
                   <Label htmlFor="addressLine1" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Address line 1 *</Label>
                   <Input
                     id="addressLine1"
-                    placeholder="Street name, P.O. box, company"
+                    placeholder="Street name, P.O. box"
                     value={addressLine1}
                     onChange={(e) => setAddressLine1(e.target.value)}
                     required
@@ -364,27 +354,48 @@ export default function AddressesPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-1.5 col-span-1">
-                    <Label htmlFor="city" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">City *</Label>
-                    <Input
-                      id="city"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      required
-                      className="h-11 rounded-none border-zinc-300 bg-white"
-                    />
-                  </div>
+                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1.5 col-span-1">
                     <Label htmlFor="province" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Province *</Label>
-                    <Select value={province} onValueChange={setProvince}>
-                      <SelectTrigger className="h-11 w-full rounded-none border-zinc-300 bg-white">
+                    <Select
+                      value={province}
+                      onValueChange={(val) => {
+                        setProvince(val);
+                        const cities = INDONESIA_DATA[val] || [];
+                        setCity(cities[0] || "");
+                      }}
+                    >
+                      <SelectTrigger className="h-11 w-full rounded-none border-zinc-300 bg-white text-left">
                         <SelectValue placeholder="Province" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-none border-zinc-200">
-                        <SelectItem value="JKT">DKI Jakarta</SelectItem>
-                        <SelectItem value="JB">Jawa Barat</SelectItem>
-                        <SelectItem value="BT">Banten</SelectItem>
+                      <SelectContent className="rounded-none border-zinc-200 max-h-[250px] overflow-y-auto">
+                        {Object.keys(INDONESIA_DATA).map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {p}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5 col-span-1">
+                    <Label htmlFor="city" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">City *</Label>
+                    <Select value={city} onValueChange={setCity}>
+                      <SelectTrigger className="h-11 w-full rounded-none border-zinc-300 bg-white text-left">
+                        <SelectValue placeholder="City" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-none border-zinc-200 max-h-[250px] overflow-y-auto">
+                        {(() => {
+                          const list = INDONESIA_DATA[province] || [];
+                          const options = [...list];
+                          if (city && !options.includes(city)) {
+                            options.unshift(city);
+                          }
+                          return options.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ));
+                        })()}
                       </SelectContent>
                     </Select>
                   </div>
@@ -401,11 +412,12 @@ export default function AddressesPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="phone" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Phone Number (Optional)</Label>
+                  <Label htmlFor="phone" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Phone Number *</Label>
                   <Input
                     id="phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    required
                     className="h-11 rounded-none border-zinc-300 bg-white"
                   />
                 </div>

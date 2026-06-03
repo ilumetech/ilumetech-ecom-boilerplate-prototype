@@ -42,7 +42,8 @@ export class WebhookService {
     }
     if (event.type === 'user.created' || event.type === 'user.updated') {
       const role = (event.data.public_metadata as any)?.role;
-      const isStaff = role === 'admin' || role === 'manager' || role === 'staff';
+      const isStaff =
+        role === 'admin' || role === 'manager' || role === 'staff';
       if (isStaff) {
         await this.upsertUser(event.data);
       } else {

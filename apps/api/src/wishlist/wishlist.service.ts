@@ -38,7 +38,7 @@ export class WishlistService {
       return { wishlisted: false };
     } else {
       await this.ensureCustomerExists(customerId);
-      
+
       await this.prisma.wishlistItem.create({
         data: {
           customerId,
@@ -96,7 +96,9 @@ export class WishlistService {
     });
 
     return {
-      data: items.map((item) => this.productService.mapToPublicResponse(item.product)),
+      data: items.map((item) =>
+        this.productService.mapToPublicResponse(item.product),
+      ),
     };
   }
 
@@ -104,7 +106,7 @@ export class WishlistService {
     const customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
     });
-    
+
     if (!customer) {
       await this.prisma.customer.create({
         data: {

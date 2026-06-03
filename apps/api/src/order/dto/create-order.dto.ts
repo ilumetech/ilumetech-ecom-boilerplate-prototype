@@ -71,9 +71,9 @@ export class CreateOrderDto {
   @IsNotEmpty()
   customerName: string;
 
-  @IsOptional()
   @IsString()
-  customerPhone?: string;
+  @IsNotEmpty()
+  customerPhone: string;
 
   @ValidateNested()
   @Type(() => CreateOrderAddressDto)

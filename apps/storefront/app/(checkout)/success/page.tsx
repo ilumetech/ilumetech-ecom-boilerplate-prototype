@@ -15,7 +15,7 @@ import type { Metadata } from "next";
 import { getCustomerOrder } from "@/lib/api/order-server";
 
 export const metadata: Metadata = {
-  title: "Order Confirmed | BrandName",
+  title: "Order Confirmed | Storefront",
   description: "Thank you for your order.",
 };
 
@@ -56,9 +56,14 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
           <Link
             href="/"
-            className="text-xl font-black uppercase tracking-tighter"
+            className="text-left"
           >
-            Brand<span className="text-zinc-500">Name</span>
+            <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
+              Storefront
+            </div>
+            <div className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.3em] text-zinc-500">
+              Official Store
+            </div>
           </Link>
           <Link
             href="/cart"

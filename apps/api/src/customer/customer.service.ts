@@ -17,9 +17,33 @@ export class CustomerService {
     secretKey: process.env.CLERK_SECRET_KEY!,
   });
 
+  private readonly storefrontClerk = createClerkClient({
+    secretKey:
+      process.env.STOREFRONT_CLERK_SECRET_KEY || process.env.CLERK_SECRET_KEY!,
+  });
+
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: CustomerQueryDto): Promise<PaginatedResponse<AppCustomer>> {
+  private async runClerkOperation<T>(
+    op: (client: ReturnType<typeof createClerkClient>) => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await op(this.clerk);
+    } catch (error) {
+      if (process.env.STOREFRONT_CLERK_SECRET_KEY) {
+        try {
+          return await op(this.storefrontClerk);
+        } catch {
+          // ignore storefront error and throw original error
+        }
+      }
+      throw error;
+    }
+  }
+
+  async findAll(
+    query: CustomerQueryDto,
+  ): Promise<PaginatedResponse<AppCustomer>> {
     const filters =
       query.isActive !== undefined ? { isActive: query.isActive } : {};
 
@@ -57,7 +81,9 @@ export class CustomerService {
 
     if (!customer) {
       try {
-        const clerkUser = await this.clerk.users.getUser(customerId);
+        const clerkUser = await this.runClerkOperation((client) =>
+          client.users.getUser(customerId),
+        );
         const primaryEmail = clerkUser.emailAddresses.find(
           (address) => address.id === clerkUser.primaryEmailAddressId,
         );
@@ -82,7 +108,10 @@ export class CustomerService {
     return this.mapPrismaCustomer(customer);
   }
 
-  async update(customerId: string, dto: UpdateCustomerDto): Promise<AppCustomer> {
+  async update(
+    customerId: string,
+    dto: UpdateCustomerDto,
+  ): Promise<AppCustomer> {
     // Ensure customer is synced to local DB from Clerk before updating
     await this.findOne(customerId);
 
@@ -105,9 +134,12 @@ export class CustomerService {
     const customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
     });
-    if (!customer) throw new NotFoundException(`Customer ${customerId} not found`);
+    if (!customer)
+      throw new NotFoundException(`Customer ${customerId} not found`);
 
-    await this.callClerk(() => this.clerk.users.deleteUser(customerId));
+    await this.callClerk(() =>
+      this.runClerkOperation((client) => client.users.deleteUser(customerId)),
+    );
     await this.prisma.customer.update({
       where: { id: customerId },
       data: { isActive: false },
@@ -138,10 +170,14 @@ export class CustomerService {
     isActive: boolean,
   ): Promise<void> {
     if (isActive) {
-      await this.callClerk(() => this.clerk.users.unbanUser(customerId));
+      await this.callClerk(() =>
+        this.runClerkOperation((client) => client.users.unbanUser(customerId)),
+      );
       return;
     }
-    await this.callClerk(() => this.clerk.users.banUser(customerId));
+    await this.callClerk(() =>
+      this.runClerkOperation((client) => client.users.banUser(customerId)),
+    );
   }
 
   private async updateClerkFields(
@@ -149,11 +185,13 @@ export class CustomerService {
     dto: UpdateCustomerDto,
   ): Promise<void> {
     await this.callClerk(() =>
-      this.clerk.users.updateUser(customerId, {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        username: dto.username,
-      }),
+      this.runClerkOperation((client) =>
+        client.users.updateUser(customerId, {
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          username: dto.username,
+        }),
+      ),
     );
   }
 

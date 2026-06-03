@@ -43,7 +43,7 @@ export async function getProducts(
   const response = await fetch(
     `${getApiBaseUrl()}/public/products${buildQueryString(params)}`,
     {
-      next: { revalidate: 60 },
+      cache: "no-store",
     },
   );
 
@@ -58,7 +58,7 @@ export async function getProductBySlug(
   slug: string,
 ): Promise<StorefrontProduct> {
   const response = await fetch(`${getApiBaseUrl()}/public/products/${slug}`, {
-    next: { revalidate: 60 },
+    cache: "no-store",
   });
 
   if (!response.ok) {

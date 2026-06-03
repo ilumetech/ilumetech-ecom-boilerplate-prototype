@@ -73,8 +73,11 @@ export class DashboardService {
     });
 
     // 3. Compile daily sales trend for the last 30 days
-    const trendMap = new Map<string, { date: string; revenue: number; orders: number }>();
-    
+    const trendMap = new Map<
+      string,
+      { date: string; revenue: number; orders: number }
+    >();
+
     // Initialize Map with keys for every day in the range YYYY-MM-DD
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
@@ -95,11 +98,18 @@ export class DashboardService {
     const salesTrend = Array.from(trendMap.values());
 
     // 4. Compile top 5 selling products by quantity/revenue in the last 30 days
-    const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
+    const productMap = new Map<
+      string,
+      { name: string; quantity: number; revenue: number }
+    >();
     for (const order of recentOrders) {
       for (const item of order.items) {
         const key = item.productName;
-        const existing = productMap.get(key) || { name: item.productName, quantity: 0, revenue: 0 };
+        const existing = productMap.get(key) || {
+          name: item.productName,
+          quantity: 0,
+          revenue: 0,
+        };
         existing.quantity += item.quantity;
         existing.revenue += item.lineTotal.toNumber();
         productMap.set(key, existing);
@@ -110,7 +120,10 @@ export class DashboardService {
       .slice(0, 5);
 
     // 5. Compile promo code usage in the last 30 days
-    const promoMap = new Map<string, { code: string; count: number; discount: number }>();
+    const promoMap = new Map<
+      string,
+      { code: string; count: number; discount: number }
+    >();
     for (const order of recentOrders) {
       if (order.promoCode) {
         const code = order.promoCode;
@@ -120,8 +133,9 @@ export class DashboardService {
         promoMap.set(code, existing);
       }
     }
-    const promoUsage = Array.from(promoMap.values())
-      .sort((a, b) => b.count - a.count);
+    const promoUsage = Array.from(promoMap.values()).sort(
+      (a, b) => b.count - a.count,
+    );
 
     return {
       totalRevenue,
@@ -133,4 +147,3 @@ export class DashboardService {
     };
   }
 }
-

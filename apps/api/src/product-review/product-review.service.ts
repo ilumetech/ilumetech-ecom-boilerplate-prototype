@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ReviewStatus, OrderStatus } from '@prisma/client';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -9,7 +13,10 @@ import { buildPaginationMeta, buildPrismaQuery } from '../common/utils';
 export class ProductReviewService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async checkCanReview(customerId: string, productId: string): Promise<boolean> {
+  async checkCanReview(
+    customerId: string,
+    productId: string,
+  ): Promise<boolean> {
     const count = await this.prisma.order.count({
       where: {
         customerId,
@@ -107,11 +114,13 @@ export class ProductReviewService {
       }
     });
 
-    const averageRating = totalCount > 0 ? Number((sum / totalCount).toFixed(1)) : 0;
+    const averageRating =
+      totalCount > 0 ? Number((sum / totalCount).toFixed(1)) : 0;
 
     const distribution = [5, 4, 3, 2, 1].map((star) => {
       const count = starCounts[star as 1 | 2 | 3 | 4 | 5] || 0;
-      const percentage = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
+      const percentage =
+        totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
       return { rating: star, count, percentage };
     });
 
@@ -183,7 +192,7 @@ export class ProductReviewService {
     const customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
     });
-    
+
     if (!customer) {
       await this.prisma.customer.create({
         data: {

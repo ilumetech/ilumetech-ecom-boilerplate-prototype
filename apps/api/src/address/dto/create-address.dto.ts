@@ -1,9 +1,4 @@
-import {
-  IsBoolean,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateAddressDto {
   @IsString()
@@ -38,9 +33,9 @@ export class CreateAddressDto {
   @IsNotEmpty()
   country: string;
 
-  @IsOptional()
   @IsString()
-  phone?: string;
+  @IsNotEmpty()
+  phone: string;
 
   @IsOptional()
   @IsBoolean()

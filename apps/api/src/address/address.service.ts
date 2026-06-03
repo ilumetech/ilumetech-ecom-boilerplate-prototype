@@ -44,10 +44,7 @@ export class AddressService {
   async findAll(customerId: string) {
     return this.prisma.customerAddress.findMany({
       where: { customerId },
-      orderBy: [
-        { isDefault: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
     });
   }
 

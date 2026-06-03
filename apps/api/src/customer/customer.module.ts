@@ -9,4 +9,3 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
   providers: [CustomerService, PermissionsGuard],
 })
 export class CustomerModule {}
-

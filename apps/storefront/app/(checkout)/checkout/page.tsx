@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ArrowLeft, ChevronRight, Lock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +25,9 @@ import {
   type PromoCodeValidationResult,
 } from "@/lib/api/promo-code";
 import { useAuth, useUser } from "@clerk/nextjs";
-import { useEffect } from "react";
 import { createOrder } from "@/lib/api/order";
+import { INDONESIA_DATA } from "@/lib/indonesia-data";
+import { getAddresses, type CustomerAddress } from "@/lib/api/address";
 
 export default function CheckoutPage() {
   const { items: cartItems, clearCart, isLoaded } = useCart();
@@ -48,11 +49,28 @@ export default function CheckoutPage() {
   const [lastName, setLastName] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
-  const [city, setCity] = useState("");
-  const [province, setProvince] = useState("JKT");
+  const [city, setCity] = useState("Jakarta Pusat");
+  const [province, setProvince] = useState("DKI Jakarta");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("ID");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Saved address states
+  const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+
+  // Helper to apply saved address
+  const applySavedAddress = useCallback((address: CustomerAddress) => {
+    setFirstName(address.firstName);
+    setLastName(address.lastName);
+    setPhone(address.phone || "");
+    setAddressLine1(address.addressLine1);
+    setAddressLine2(address.addressLine2 || "");
+    setProvince(address.province);
+    setCity(address.city);
+    setPostalCode(address.postalCode);
+    setCountry(address.country);
+  }, []);
 
   // Protect route
   useEffect(() => {
@@ -61,14 +79,39 @@ export default function CheckoutPage() {
     }
   }, [isAuthLoaded, isSignedIn, router]);
 
-  // Pre-populate user details
+  // Load saved addresses on auth load
   useEffect(() => {
-    if (user) {
+    const loadSavedAddresses = async () => {
+      if (!isSignedIn) return;
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const data = await getAddresses(token);
+        setSavedAddresses(data);
+        if (data.length > 0) {
+          const defaultAddr = data.find((a) => a.isDefault) || data[0];
+          setSelectedAddressId(defaultAddr.id);
+          applySavedAddress(defaultAddr);
+        }
+      } catch (err) {
+        console.error("Failed to load saved addresses", err);
+      }
+    };
+    if (isAuthLoaded && isSignedIn) {
+      loadSavedAddresses();
+    }
+  }, [isAuthLoaded, isSignedIn, getToken, applySavedAddress]);
+
+  // Pre-populate user details (only if no saved addresses are available)
+  useEffect(() => {
+    if (user && savedAddresses.length === 0) {
       setEmail(user.primaryEmailAddress?.emailAddress || "");
       setFirstName(user.firstName || "");
       setLastName(user.lastName || "");
+    } else if (user) {
+      setEmail(user.primaryEmailAddress?.emailAddress || "");
     }
-  }, [user]);
+  }, [user, savedAddresses]);
 
   const subtotal = cartItems.reduce(
     (total, item) => total + item.price * item.quantity,
@@ -105,7 +148,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!email || !firstName || !lastName || !addressLine1 || !city || !province || !postalCode) {
+    if (!email || !firstName || !lastName || !addressLine1 || !city || !province || !postalCode || !phone) {
       alert("Please fill in all required shipping and contact details.");
       return;
     }
@@ -130,7 +173,7 @@ export default function CheckoutPage() {
         items: orderItems,
         customerEmail: email,
         customerName: `${firstName} ${lastName}`.trim(),
-        customerPhone: phone || undefined,
+        customerPhone: phone,
         shippingAddress: {
           firstName,
           lastName,
@@ -165,9 +208,14 @@ export default function CheckoutPage() {
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
             <Link
               href="/"
-              className="text-xl font-black uppercase tracking-tighter"
+              className="text-left"
             >
-              Brand<span className="text-zinc-500">Name</span>
+              <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
+                Storefront
+              </div>
+              <div className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.3em] text-zinc-500">
+                Official Store
+              </div>
             </Link>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
               <Lock className="h-4 w-4" />
@@ -192,9 +240,14 @@ export default function CheckoutPage() {
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
             <Link
               href="/"
-              className="text-xl font-black uppercase tracking-tighter"
+              className="text-left"
             >
-              Brand<span className="text-zinc-500">Name</span>
+              <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
+                Storefront
+              </div>
+              <div className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.3em] text-zinc-500">
+                Official Store
+              </div>
             </Link>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
               <Lock className="h-4 w-4" />
@@ -230,9 +283,14 @@ export default function CheckoutPage() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
           <Link
             href="/"
-            className="text-xl font-black uppercase tracking-tighter"
+            className="text-left"
           >
-            Brand<span className="text-zinc-500">Name</span>
+            <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
+              Storefront
+            </div>
+            <div className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.3em] text-zinc-500">
+              Official Store
+            </div>
           </Link>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
             <Lock className="h-4 w-4" />
@@ -257,17 +315,9 @@ export default function CheckoutPage() {
           <div className="space-y-8">
             {/* Contact Information */}
             <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-black uppercase tracking-tight">
-                  Contact
-                </h2>
-                <Link
-                  href="/login"
-                  className="text-sm text-zinc-500 underline hover:text-black"
-                >
-                  Log in
-                </Link>
-              </div>
+              <h2 className="text-xl font-black uppercase tracking-tight">
+                Contact
+              </h2>
               <div className="space-y-3">
                 <div className="grid gap-2">
                   <Input
@@ -298,25 +348,57 @@ export default function CheckoutPage() {
 
             {/* Delivery */}
             <section className="space-y-4">
-              <h2 className="text-xl font-black uppercase tracking-tight">
-                Delivery
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-xl font-black uppercase tracking-tight">
+                  Delivery
+                </h2>
+                {savedAddresses.length > 0 && (
+                  <div className="w-full sm:w-72">
+                    <Select
+                      value={selectedAddressId}
+                      onValueChange={(val) => {
+                        setSelectedAddressId(val);
+                        if (val === "new") {
+                          // Clear fields
+                          setPhone("");
+                          setAddressLine1("");
+                          setAddressLine2("");
+                          setPostalCode("");
+                          setProvince("DKI Jakarta");
+                          setCity("Jakarta Pusat");
+                        } else {
+                          const addr = savedAddresses.find((a) => a.id === val);
+                          if (addr) {
+                            applySavedAddress(addr);
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-11 w-full rounded-none border-zinc-300 bg-white text-xs font-semibold uppercase tracking-wider text-left">
+                        <SelectValue placeholder="Use a saved address" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-none border-zinc-200 max-h-[250px] overflow-y-auto">
+                        {savedAddresses.map((addr) => (
+                          <SelectItem
+                            key={addr.id}
+                            value={addr.id}
+                            className="text-xs uppercase font-medium tracking-wide"
+                          >
+                            {addr.firstName} {addr.lastName} - {addr.addressLine1}, {addr.city} {addr.isDefault ? "(Default)" : ""}
+                          </SelectItem>
+                        ))}
+                        <SelectItem
+                          value="new"
+                          className="text-xs uppercase font-semibold tracking-wide text-zinc-500"
+                        >
+                          + Use a new address
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
               <div className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="country" className="sr-only">
-                    Country/Region
-                  </Label>
-                  <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white">
-                      <SelectValue placeholder="Country/Region" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-none border-zinc-200">
-                      <SelectItem value="ID">Indonesia</SelectItem>
-                      <SelectItem value="SG">Singapore</SelectItem>
-                      <SelectItem value="MY">Malaysia</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
@@ -347,16 +429,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="company" className="sr-only">
-                    Company (optional)
-                  </Label>
-                  <Input
-                    id="company"
-                    placeholder="Company (optional)"
-                    className="h-12 rounded-none border-zinc-300 bg-white"
-                  />
-                </div>
+
 
                 <div className="grid gap-2">
                   <Label htmlFor="address" className="sr-only">
@@ -387,30 +460,43 @@ export default function CheckoutPage() {
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="grid gap-2 sm:col-span-1">
-                    <Label htmlFor="city" className="sr-only">
-                      City
-                    </Label>
-                    <Input
-                      id="city"
-                      placeholder="City"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      required
-                      className="h-12 rounded-none border-zinc-300 bg-white"
-                    />
-                  </div>
-                  <div className="grid gap-2 sm:col-span-1">
                     <Label htmlFor="province" className="sr-only">
                       Province
                     </Label>
-                    <Select value={province} onValueChange={setProvince}>
-                      <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white">
+                    <Select
+                      value={province}
+                      onValueChange={(val) => {
+                        setProvince(val);
+                        const cities = INDONESIA_DATA[val] || [];
+                        setCity(cities[0] || "");
+                      }}
+                    >
+                      <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white text-left">
                         <SelectValue placeholder="Province" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-none border-zinc-200">
-                        <SelectItem value="JKT">DKI Jakarta</SelectItem>
-                        <SelectItem value="JB">Jawa Barat</SelectItem>
-                        <SelectItem value="BT">Banten</SelectItem>
+                      <SelectContent className="rounded-none border-zinc-200 max-h-[250px] overflow-y-auto">
+                        {Object.keys(INDONESIA_DATA).map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {p}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2 sm:col-span-1">
+                    <Label htmlFor="city" className="sr-only">
+                      City
+                    </Label>
+                    <Select value={city} onValueChange={setCity}>
+                      <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white text-left">
+                        <SelectValue placeholder="City" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-none border-zinc-200 max-h-[250px] overflow-y-auto">
+                        {(INDONESIA_DATA[province] || []).map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -420,7 +506,7 @@ export default function CheckoutPage() {
                     </Label>
                     <Input
                       id="postalCode"
-                      placeholder="Postal code"
+                      placeholder="Postal code *"
                       value={postalCode}
                       onChange={(e) => setPostalCode(e.target.value)}
                       required
@@ -436,9 +522,10 @@ export default function CheckoutPage() {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="Phone (optional)"
+                    placeholder="Phone number *"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    required
                     className="h-12 rounded-none border-zinc-300 bg-white"
                   />
                 </div>

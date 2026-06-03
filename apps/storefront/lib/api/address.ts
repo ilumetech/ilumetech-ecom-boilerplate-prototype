@@ -9,7 +9,7 @@ export interface CreateAddressInput {
   province: string;
   postalCode: string;
   country: string;
-  phone?: string;
+  phone: string;
   isDefault?: boolean;
 }
 

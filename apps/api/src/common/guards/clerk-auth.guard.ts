@@ -34,7 +34,17 @@ export class ClerkAuthGuard implements CanActivate {
         secretKey: process.env.CLERK_SECRET_KEY!,
       });
       return payload as ClerkUser;
-    } catch {
+    } catch (error) {
+      if (process.env.STOREFRONT_CLERK_SECRET_KEY) {
+        try {
+          const payload = await verifyToken(token, {
+            secretKey: process.env.STOREFRONT_CLERK_SECRET_KEY,
+          });
+          return payload as ClerkUser;
+        } catch {
+          // both failed, fall through to exception
+        }
+      }
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

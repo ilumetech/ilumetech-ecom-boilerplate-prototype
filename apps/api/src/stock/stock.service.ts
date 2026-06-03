@@ -155,11 +155,15 @@ export class StockService {
     }
 
     if (dto.referenceType && !dto.referenceId) {
-      throw new BadRequestException('referenceId is required when referenceType is set');
+      throw new BadRequestException(
+        'referenceId is required when referenceType is set',
+      );
     }
 
     if (dto.referenceId && !dto.referenceType) {
-      throw new BadRequestException('referenceType is required when referenceId is set');
+      throw new BadRequestException(
+        'referenceType is required when referenceId is set',
+      );
     }
   }
 

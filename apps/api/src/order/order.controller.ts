@@ -8,10 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PERMISSIONS } from '@ilumetech/types';
-import {
-  GetCurrentUser,
-  Permissions,
-} from '../common/decorators';
+import { GetCurrentUser, Permissions } from '../common/decorators';
 import { ClerkAuthGuard } from '../common/guards/clerk-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { QueryOrderDto, UpdateOrderStatusDto } from './dto';
