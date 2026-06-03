@@ -3,6 +3,7 @@ import { Inter, Outfit } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { CartProvider } from "@/lib/providers/cart-provider";
+import { WishlistProvider } from "@/lib/providers/wishlist-provider";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -24,7 +25,9 @@ export default function RootLayout({
       >
         <body className="min-h-full flex flex-col font-sans">
           <QueryProvider>
-            <CartProvider>{children}</CartProvider>
+            <CartProvider>
+              <WishlistProvider>{children}</WishlistProvider>
+            </CartProvider>
           </QueryProvider>
         </body>
       </html>

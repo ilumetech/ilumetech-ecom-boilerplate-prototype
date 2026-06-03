@@ -1,14 +1,47 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { Heart } from "lucide-react";
 import type { StorefrontProduct } from "@/lib/api/product";
 import { formatPrice } from "@/lib/utils/format-price";
+import { useWishlist } from "@/lib/hooks/use-wishlist";
 
 interface RelatedProductCardProps {
   product: StorefrontProduct;
 }
 
 export function RelatedProductCard({ product }: RelatedProductCardProps) {
+  const { isSignedIn } = useAuth();
+  const router = useRouter();
+  const { isWishlisted, toggleWishlist } = useWishlist();
+  const [isToggling, setIsToggling] = useState(false);
+
+  const wishlisted = isWishlisted(product.id);
+
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isSignedIn) {
+      router.push("/sign-in");
+      return;
+    }
+
+    if (isToggling) return;
+
+    setIsToggling(true);
+    try {
+      await toggleWishlist(product.id);
+    } catch (err) {
+      console.error("Failed to toggle wishlist", err);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
   const primaryImage = product.images?.[0];
   const primaryVariant = product.variants?.find((variant) => variant.isActive);
   const price = primaryVariant?.finalPrice ?? product.sellingPrice;
@@ -33,13 +66,17 @@ export function RelatedProductCard({ product }: RelatedProductCardProps) {
           />
         ) : null}
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          className="absolute right-3 top-3 text-lg leading-none text-zinc-500 hover:text-black"
+          onClick={handleWishlistToggle}
+          disabled={isToggling}
+          className={`absolute right-3 top-3 transition-all hover:scale-110 cursor-pointer ${
+            wishlisted ? "text-black" : "text-zinc-500 hover:text-black"
+          }`}
         >
-          ♡<span className="sr-only">Add to wishlist</span>
+          <Heart
+            className="h-4 w-4"
+            style={wishlisted ? { fill: "currentColor" } : {}}
+          />
+          <span className="sr-only">Add to wishlist</span>
         </button>
       </div>
       <div className="mt-3">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import {
   Heart,
@@ -13,47 +13,17 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getWishlist, toggleWishlist } from "@/lib/api/wishlist";
-import type { StorefrontProduct } from "@/lib/api/product";
+import { useWishlist } from "@/lib/hooks/use-wishlist";
 
 export default function WishlistPage() {
-  const { isSignedIn, getToken, isLoaded: isAuthLoaded } = useAuth();
-  const [items, setItems] = useState<StorefrontProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isSignedIn } = useAuth();
+  const { items, toggleWishlist, isLoaded, isLoading } = useWishlist();
   const [searchQuery, setSearchQuery] = useState("");
-
-  const fetchWishlist = async () => {
-    if (!isSignedIn) return;
-    setIsLoading(true);
-    try {
-      const token = await getToken();
-      if (!token) return;
-      const wishlist = await getWishlist(token);
-      setItems(wishlist);
-    } catch (err) {
-      console.error("Failed to load wishlist", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isAuthLoaded) {
-      if (isSignedIn) {
-        fetchWishlist();
-      } else {
-        setIsLoading(false);
-      }
-    }
-  }, [isAuthLoaded, isSignedIn]);
 
   const removeItem = async (id: string) => {
     if (!isSignedIn) return;
     try {
-      const token = await getToken();
-      if (!token) return;
-      await toggleWishlist(id, token);
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      await toggleWishlist(id);
     } catch (err) {
       console.error("Failed to remove item", err);
     }
@@ -75,7 +45,7 @@ export default function WishlistPage() {
       .replace("Rp", "RP ");
   };
 
-  if (isLoading) {
+  if (!isLoaded || isLoading) {
     return (
       <div className="py-24 text-center text-xs font-bold uppercase tracking-widest text-zinc-400">
         Loading your wishlist...

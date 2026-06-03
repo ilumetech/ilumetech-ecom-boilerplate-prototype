@@ -1,16 +1,48 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { StorefrontProduct } from "@/lib/api/product";
 import { formatPrice } from "@/lib/utils/format-price";
+import { useWishlist } from "@/lib/hooks/use-wishlist";
 
 interface ProductCardProps {
   product: StorefrontProduct;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const { isSignedIn } = useAuth();
+  const router = useRouter();
+  const { isWishlisted, toggleWishlist } = useWishlist();
+  const [isToggling, setIsToggling] = useState(false);
+
+  const wishlisted = isWishlisted(product.id);
+
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isSignedIn) {
+      router.push("/sign-in");
+      return;
+    }
+
+    if (isToggling) return;
+
+    setIsToggling(true);
+    try {
+      await toggleWishlist(product.id);
+    } catch (err) {
+      console.error("Failed to toggle wishlist", err);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
   const primaryImage = product.images?.[0];
   const primaryVariant = product.variants?.find((variant) => variant.isActive);
   const price = primaryVariant?.finalPrice ?? product.sellingPrice;
@@ -43,13 +75,16 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Wishlist Button */}
         <div className="absolute right-3 top-3 z-10 transition-transform duration-300 group-hover:-translate-y-1">
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            className="flex h-9 w-9 items-center justify-center border border-transparent bg-transparent text-zinc-400 transition-all hover:border-black hover:bg-black hover:text-white"
+            onClick={handleWishlistToggle}
+            disabled={isToggling}
+            className={`flex h-9 w-9 items-center justify-center border border-transparent bg-transparent transition-all hover:border-black hover:bg-black hover:text-white cursor-pointer ${
+              wishlisted ? "text-black" : "text-zinc-400"
+            }`}
           >
-            <Heart className="h-4 w-4" />
+            <Heart 
+              className="h-4 w-4" 
+              style={wishlisted ? { fill: "currentColor" } : {}}
+            />
             <span className="sr-only">Add to wishlist</span>
           </button>
         </div>
