@@ -85,14 +85,34 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
             Your order is confirmed
           </h1>
           <p className="text-zinc-500 text-lg max-w-md mx-auto">
-            Thank you for shopping with us. We&apos;ve sent a confirmation email to{" "}
-            <span className="text-black font-bold">{order.customerEmail}</span>{" "}
-            with your order details.
+            {order.status === "PENDING" ? (
+              <>
+                Your order #{order.orderNumber} has been created. Please complete your payment to confirm your order.
+              </>
+            ) : (
+              <>
+                Thank you for shopping with us. We&apos;ve sent a confirmation email to{" "}
+                <span className="text-black font-bold">{order.customerEmail}</span>{" "}
+                with your order details.
+              </>
+            )}
           </p>
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+            {order.status === "PENDING" && order.snapUrl && (
+              <Button
+                asChild
+                className="h-14 rounded-none bg-emerald-600 px-10 text-sm font-bold uppercase tracking-widest text-white hover:bg-emerald-700 transition-all"
+              >
+                <Link href={order.snapUrl}>Complete Payment</Link>
+              </Button>
+            )}
             <Button
               asChild
-              className="h-14 rounded-none bg-black px-10 text-sm font-bold uppercase tracking-widest text-white hover:bg-zinc-800 transition-all"
+              className={`h-14 rounded-none px-10 text-sm font-bold uppercase tracking-widest transition-all ${
+                order.status === "PENDING" && order.snapUrl
+                  ? "border-2 border-black bg-white text-black hover:bg-zinc-50"
+                  : "bg-black text-white hover:bg-zinc-800"
+              }`}
             >
               <Link href={`/account/orders/${order.id}`}>Track Your Order</Link>
             </Button>
@@ -131,7 +151,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
                   <p className="text-zinc-400 uppercase font-bold text-[10px] tracking-widest mb-1">
                     Payment Method
                   </p>
-                  <p className="font-bold">Dummy Payment</p>
+                  <p className="font-bold">Midtrans Sandbox</p>
                 </div>
                 <div>
                   <p className="text-zinc-400 uppercase font-bold text-[10px] tracking-widest mb-1">

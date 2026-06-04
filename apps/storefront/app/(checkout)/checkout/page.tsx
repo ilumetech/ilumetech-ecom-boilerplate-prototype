@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
+import Script from "next/script";
 import { ArrowLeft, ChevronRight, Lock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -192,7 +193,34 @@ export default function CheckoutPage() {
       const order = await createOrder(orderInput, token);
 
       clearCart();
-      router.push(`/success?orderId=${order.id}`);
+      if (order.snapToken) {
+        const snap = (window as any).snap;
+        if (snap) {
+          snap.pay(order.snapToken, {
+            onSuccess: () => {
+              router.push(`/success?orderId=${order.id}`);
+            },
+            onPending: () => {
+              router.push(`/success?orderId=${order.id}`);
+            },
+            onError: () => {
+              setIsSubmitting(false);
+              alert("Payment failed. Please try again or choose a different payment method.");
+            },
+            onClose: () => {
+              // User closed the payment popup without completing — allow retry
+              setIsSubmitting(false);
+            },
+          });
+        } else {
+          // Fallback if Snap script is not loaded
+          window.location.href = order.snapUrl || `/success?orderId=${order.id}`;
+        }
+      } else if (order.snapUrl) {
+        window.location.href = order.snapUrl;
+      } else {
+        router.push(`/success?orderId=${order.id}`);
+      }
     } catch (e: any) {
       console.error(e);
       alert(e.message || "Failed to place order. Please try again.");
@@ -588,93 +616,29 @@ export default function CheckoutPage() {
             {/* Payment */}
             <section className="space-y-4">
               <h2 className="text-xl font-black uppercase tracking-tight">
-                Payment
+                Payment Method
               </h2>
-              <p className="text-sm text-zinc-500">
-                All transactions are secure and encrypted.
-              </p>
-
-              <RadioGroup
-                defaultValue="credit-card"
-                className="grid gap-0 -space-y-px"
-              >
-                {/* Credit Card */}
-                <div className="relative border border-zinc-300 bg-white p-4 [&:has([data-state=checked])]:border-black [&:has([data-state=checked])]:z-10 [&:has([data-state=checked])]:bg-zinc-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem
-                        value="credit-card"
-                        id="credit-card"
-                        className="text-black"
-                      />
-                      <Label
-                        htmlFor="credit-card"
-                        className="font-semibold cursor-pointer"
-                      >
-                        Credit Card
-                      </Label>
+              <Card className="rounded-none border-zinc-300 shadow-none bg-zinc-50/50">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-6 w-12 bg-white rounded-none border border-zinc-300 flex items-center justify-center text-[8px] font-black text-black tracking-wider shrink-0 shadow-sm">
+                      MIDTRANS
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold uppercase tracking-wide">
+                        Secure Payment via Midtrans
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Supports Credit Card, Virtual Account (Bank Transfer), and e-Wallet (GoPay, ShopeePay, etc.)
+                      </p>
                     </div>
                   </div>
-                  <div className="mt-4 grid gap-4 hidden-when-not-checked">
-                    <Input
-                      placeholder="Card number"
-                      className="h-12 rounded-none border-zinc-300 bg-white"
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <Input
-                        placeholder="Expiration date (MM / YY)"
-                        className="h-12 rounded-none border-zinc-300 bg-white"
-                      />
-                      <Input
-                        placeholder="Security code"
-                        className="h-12 rounded-none border-zinc-300 bg-white"
-                      />
-                    </div>
-                    <Input
-                      placeholder="Name on card"
-                      className="h-12 rounded-none border-zinc-300 bg-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Bank Transfer */}
-                <div className="relative border border-zinc-300 bg-white p-4 [&:has([data-state=checked])]:border-black [&:has([data-state=checked])]:z-10 [&:has([data-state=checked])]:bg-zinc-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem
-                        value="bank-transfer"
-                        id="bank-transfer"
-                        className="text-black"
-                      />
-                      <Label
-                        htmlFor="bank-transfer"
-                        className="font-semibold cursor-pointer"
-                      >
-                        Virtual Account / Bank Transfer
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* e-Wallet */}
-                <div className="relative border border-zinc-300 bg-white p-4 [&:has([data-state=checked])]:border-black [&:has([data-state=checked])]:z-10 [&:has([data-state=checked])]:bg-zinc-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem
-                        value="ewallet"
-                        id="ewallet"
-                        className="text-black"
-                      />
-                      <Label
-                        htmlFor="ewallet"
-                        className="font-semibold cursor-pointer"
-                      >
-                        e-Wallet (GoPay, OVO, Dana)
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-              </RadioGroup>
+                  <Separator className="bg-zinc-200" />
+                  <p className="text-xs text-zinc-500 leading-relaxed">
+                    After clicking &quot;Pay Now&quot;, you will be securely redirected to Midtrans Payment Gateway to complete your purchase.
+                  </p>
+                </CardContent>
+              </Card>
             </section>
 
             {/* Actions */}
@@ -844,19 +808,15 @@ export default function CheckoutPage() {
           </div>
         </div>
       </section>
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-        .hidden-when-not-checked {
-          display: none;
+
+      <Script
+        src={
+          process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === "true"
+            ? "https://app.midtrans.com/snap/snap.js"
+            : "https://app.sandbox.midtrans.com/snap/snap.js"
         }
-        [data-state="checked"] + label + .hidden-when-not-checked,
-        div:has([data-state="checked"]) > .hidden-when-not-checked,
-        div:has([data-state="checked"]) + .hidden-when-not-checked {
-          display: grid;
-        }
-      `,
-        }}
+        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+        strategy="afterInteractive"
       />
     </main>
   );

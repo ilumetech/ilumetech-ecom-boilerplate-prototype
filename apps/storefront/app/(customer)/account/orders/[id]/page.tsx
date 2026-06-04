@@ -496,10 +496,22 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
                 </h4>
                 <div className="text-xs font-bold uppercase tracking-wide text-zinc-600 flex items-center gap-2">
                   <div className="h-6 w-10 bg-zinc-100 rounded-none border border-zinc-200 flex items-center justify-center text-[8px] font-black text-black">
-                    DUMMY
+                    MIDTRANS
                   </div>
-                  <p>Dummy Payment Gateway</p>
+                  <p>Midtrans Sandbox</p>
                 </div>
+                {order.status === "PENDING" && order.snapUrl && (
+                  <div className="mt-4">
+                    <Button
+                      asChild
+                      className="w-full h-11 rounded-none bg-emerald-600 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-700"
+                    >
+                      <Link href={order.snapUrl}>
+                        Complete Payment
+                      </Link>
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
             <CardFooter className="bg-zinc-50/50 border-t border-zinc-200 p-4">

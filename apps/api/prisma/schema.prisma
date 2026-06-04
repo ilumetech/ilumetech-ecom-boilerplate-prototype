@@ -292,6 +292,8 @@ model Order {
   promoCode       String?
   shippingMethod  String?
   shippingAddress Json
+  snapToken       String?
+  snapUrl         String?
   items           OrderItem[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

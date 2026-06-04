@@ -5,9 +5,10 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { PrismaModule } from '../common/prisma/prisma.module';
 import { WebhookController } from './webhook.controller';
 import { WebhookService } from './webhook.service';
+import { OrderModule } from '../order/order.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, OrderModule],
   controllers: [WebhookController],
   providers: [WebhookService],
 })

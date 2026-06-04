@@ -36,4 +36,12 @@ export class WebhookController {
       body,
     );
   }
+
+  @Post('midtrans')
+  async handleMidtransWebhook(
+    @Body() body: any,
+  ): Promise<{ status: string }> {
+    await this.webhookService.handleMidtransNotification(body);
+    return { status: 'ok' };
+  }
 }

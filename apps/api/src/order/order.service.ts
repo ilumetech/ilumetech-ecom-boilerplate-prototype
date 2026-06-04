@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -14,6 +15,7 @@ import type { Order, OrderAddress, PaginatedResponse } from '@ilumetech/types';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { buildPaginationMeta, buildPrismaQuery } from '../common/utils';
 import type { CreateOrderDto, QueryOrderDto } from './dto';
+import { MidtransService } from './midtrans.service';
 
 type OrderWithItems = Prisma.OrderGetPayload<{
   include: {
@@ -47,7 +49,12 @@ interface DiscountCalculation {
 
 @Injectable()
 export class OrderService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(OrderService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly midtransService: MidtransService,
+  ) {}
 
   async create(customerId: string, dto: CreateOrderDto): Promise<Order> {
     this.validateDuplicateItems(dto.items.map((item) => item.productVariantId));
@@ -153,6 +160,51 @@ export class OrderService {
 
       return created;
     });
+
+    // Initiate Midtrans transaction
+    let snapToken: string | null = null;
+    let snapUrl: string | null = null;
+
+    try {
+      const midtransResponse = await this.midtransService.createTransaction({
+        orderId: order.orderNumber,
+        grossAmount: order.totalAmount.toNumber(),
+        customerDetails: {
+          firstName: order.customerName.split(' ')[0] || '',
+          lastName: order.customerName.split(' ').slice(1).join(' ') || '',
+          email: order.customerEmail,
+          phone: order.customerPhone || undefined,
+        },
+        items: order.items.map((item) => ({
+          id: item.productVariantId,
+          price: item.unitPrice.toNumber(),
+          quantity: item.quantity,
+          name: item.productName,
+        })),
+        shippingAmount: order.shippingAmount.toNumber(),
+        shippingMethod: order.shippingMethod || undefined,
+        discountAmount: order.discountAmount.toNumber(),
+        promoCode: order.promoCode || undefined,
+      });
+
+      snapToken = midtransResponse.token;
+      snapUrl = midtransResponse.redirect_url;
+
+      // Update order in database with Midtrans info
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: { snapToken, snapUrl },
+      });
+
+      // Update the in-memory object returned to customer
+      order.snapToken = snapToken;
+      order.snapUrl = snapUrl;
+    } catch (error) {
+      this.logger.error(
+        `Failed to initiate Midtrans transaction for order ${order.orderNumber}:`,
+        error,
+      );
+    }
 
     return this.mapToResponse(order);
   }
@@ -599,6 +651,8 @@ export class OrderService {
       promoCode: order.promoCode,
       shippingMethod: order.shippingMethod,
       shippingAddress: this.mapShippingAddress(order.shippingAddress),
+      snapToken: order.snapToken,
+      snapUrl: order.snapUrl,
       items: order.items.map((item) => ({
         id: item.id,
         productId: item.productId,

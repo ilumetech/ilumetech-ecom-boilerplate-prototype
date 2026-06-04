@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Webhook } from 'svix';
 import type { UserJSON, UserDeletedJSON, WebhookEvent } from '@clerk/backend';
+import { OrderStatus } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { OrderService } from '../order/order.service';
+import { MidtransService } from '../order/midtrans.service';
 
 type SvixHeaders = {
   'svix-id': string;
@@ -11,7 +14,11 @@ type SvixHeaders = {
 
 @Injectable()
 export class WebhookService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly orderService: OrderService,
+    private readonly midtransService: MidtransService,
+  ) {}
 
   async handleEvent(
     rawBody: Buffer,
@@ -114,5 +121,43 @@ export class WebhookService {
       where: { id },
       data: { isActive: false },
     });
+  }
+
+  async handleMidtransNotification(body: any): Promise<void> {
+    const isValid = this.midtransService.verifyNotificationSignature(body);
+    if (!isValid) {
+      throw new BadRequestException('Invalid Midtrans signature key');
+    }
+
+    const orderNumber = body.order_id;
+    const transactionStatus = body.transaction_status;
+    const fraudStatus = body.fraud_status;
+
+    const order = await this.prisma.order.findUnique({
+      where: { orderNumber },
+    });
+
+    if (!order) {
+      throw new BadRequestException(`Order ${orderNumber} not found`);
+    }
+
+    let nextStatus: OrderStatus | null = null;
+    if (transactionStatus === 'capture') {
+      if (fraudStatus === 'accept') {
+        nextStatus = OrderStatus.CONFIRMED;
+      }
+    } else if (transactionStatus === 'settlement') {
+      nextStatus = OrderStatus.CONFIRMED;
+    } else if (
+      transactionStatus === 'cancel' ||
+      transactionStatus === 'deny' ||
+      transactionStatus === 'expire'
+    ) {
+      nextStatus = OrderStatus.CANCELLED;
+    }
+
+    if (nextStatus && order.status !== nextStatus) {
+      await this.orderService.updateStatus(order.id, nextStatus, 'system_midtrans');
+    }
   }
 }
