@@ -15,8 +15,12 @@ export async function apiFetch<T>(
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
+  const isWriteMethod = options?.method && ["POST", "PUT", "PATCH"].includes(options.method.toUpperCase());
+  const body = isWriteMethod && options?.body === undefined ? JSON.stringify({}) : options?.body;
+
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
+    body,
     headers: {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),

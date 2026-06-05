@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
@@ -18,11 +18,12 @@ export function RefreshStatusButton({
   className,
   variant = "default",
 }: RefreshStatusButtonProps) {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded: isAuthLoaded } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const hasPolled = useRef(false);
 
   const handleRefresh = async () => {
     setIsLoading(true);
@@ -53,6 +54,39 @@ export function RefreshStatusButton({
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isAuthLoaded || hasPolled.current) return;
+    hasPolled.current = true;
+
+    // Initial check on load
+    handleRefresh();
+
+    // Setup interval to poll a couple more times just in case payment confirmation is delayed
+    let count = 0;
+    const interval = setInterval(async () => {
+      count++;
+      if (count >= 5) {
+        clearInterval(interval);
+        return;
+      }
+      
+      try {
+        const token = await getToken();
+        if (!token) return;
+        
+        const updatedOrder = await refreshOrderStatus(orderId, token);
+        if (updatedOrder.status === "CONFIRMED" || updatedOrder.status === "CANCELLED") {
+          clearInterval(interval);
+          router.refresh();
+        }
+      } catch (err) {
+        console.error("Auto-poll status failed", err);
+      }
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [isAuthLoaded, orderId]);
 
   const getButtonStyle = () => {
     if (variant === "sidebar") {

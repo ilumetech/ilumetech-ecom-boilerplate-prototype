@@ -61,6 +61,7 @@ export class OrderService {
 
     const order = await this.prisma.$transaction(async (tx) => {
       await this.ensureCustomer(tx, customerId, dto);
+      await this.saveCustomerAddress(tx, customerId, dto);
 
       const variants = await this.getCheckoutVariants(
         tx,
@@ -686,6 +687,42 @@ export class OrderService {
 
   private readString(value: unknown): string {
     return typeof value === 'string' ? value : '';
+  }
+
+  private mapAddressData(dto: CreateOrderDto, customerId: string) {
+    const addr = dto.shippingAddress;
+    return {
+      customerId,
+      firstName: addr.firstName,
+      lastName: addr.lastName,
+      addressLine1: addr.addressLine1,
+      addressLine2: addr.addressLine2 ?? null,
+      city: addr.city,
+      province: addr.province,
+      postalCode: addr.postalCode,
+      country: addr.country,
+    };
+  }
+
+  private async saveCustomerAddress(
+    tx: Prisma.TransactionClient,
+    customerId: string,
+    dto: CreateOrderDto,
+  ): Promise<void> {
+    const addressData = this.mapAddressData(dto, customerId);
+    const existing = await tx.customerAddress.findFirst({
+      where: addressData,
+    });
+    if (existing) return;
+
+    const count = await tx.customerAddress.count({ where: { customerId } });
+    await tx.customerAddress.create({
+      data: {
+        ...addressData,
+        phone: dto.customerPhone || null,
+        isDefault: count === 0,
+      },
+    });
   }
 
   private mapToResponse(order: OrderWithItems): Order {
