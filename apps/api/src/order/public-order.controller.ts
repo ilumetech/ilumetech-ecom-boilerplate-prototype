@@ -40,4 +40,16 @@ export class PublicOrderController {
 
     return { data: order };
   }
+
+  @Post(':id/refresh-status')
+  async refreshStatus(@CurrentUser() user: ClerkUser, @Param('id') id: string) {
+    const order = await this.orderService.findOne(id);
+
+    if (order.customerId !== user.sub) {
+      throw new NotFoundException(`Order ${id} not found`);
+    }
+
+    const refreshed = await this.orderService.refreshStatus(id, user.sub);
+    return { data: refreshed };
+  }
 }

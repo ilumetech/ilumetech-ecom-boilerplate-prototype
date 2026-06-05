@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { getCustomerOrder } from "@/lib/api/order-server";
 import { OrderItemReviewButton } from "@/components/order/order-item-review-button";
+import { RefreshStatusButton } from "@/components/order/refresh-status-button";
 
 interface TimelineItem {
   title: string;
@@ -500,16 +501,19 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
                   </div>
                   <p>Midtrans Sandbox</p>
                 </div>
-                {order.status === "PENDING" && order.snapUrl && (
-                  <div className="mt-4">
-                    <Button
-                      asChild
-                      className="w-full h-11 rounded-none bg-emerald-600 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-700"
-                    >
-                      <Link href={order.snapUrl}>
-                        Complete Payment
-                      </Link>
-                    </Button>
+                {order.status === "PENDING" && (
+                  <div className="mt-4 space-y-2">
+                    {order.snapUrl && (
+                      <Button
+                        asChild
+                        className="w-full h-11 rounded-none bg-emerald-600 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-700"
+                      >
+                        <Link href={order.snapUrl}>
+                          Complete Payment
+                        </Link>
+                      </Button>
+                    )}
+                    <RefreshStatusButton orderId={order.id} variant="sidebar" className="w-full" />
                   </div>
                 )}
               </div>

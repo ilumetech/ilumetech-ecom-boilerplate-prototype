@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import {
-  Check,
+  Clock,
   Package,
   MapPin,
   Truck,
@@ -13,17 +13,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { Metadata } from "next";
 import { getCustomerOrder } from "@/lib/api/order-server";
+import { RefreshStatusButton } from "@/components/order/refresh-status-button";
 
 export const metadata: Metadata = {
-  title: "Order Confirmed | Storefront",
-  description: "Thank you for your order.",
+  title: "Payment Pending | Storefront",
+  description: "Awaiting payment confirmation.",
 };
 
-interface SuccessPageProps {
+interface PendingPageProps {
   searchParams: Promise<{ orderId?: string }>;
 }
 
-export default async function SuccessPage({ searchParams }: SuccessPageProps) {
+export default async function PendingPage({ searchParams }: PendingPageProps) {
   const { orderId } = await searchParams;
 
   if (!orderId) {
@@ -34,12 +35,12 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   try {
     order = await getCustomerOrder(orderId);
   } catch (error) {
-    console.error("Failed to fetch order details on SuccessPage:", error);
+    console.error("Failed to fetch order details on PendingPage:", error);
     redirect("/");
   }
 
-  if (order.status === "PENDING") {
-    redirect(`/pending?orderId=${order.id}`);
+  if (order.status === "CONFIRMED") {
+    redirect(`/success?orderId=${order.id}`);
   }
 
   if (order.status === "CANCELLED") {
@@ -59,13 +60,10 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
 
   return (
     <main className="min-h-screen bg-white text-black">
-      {/* Success Header - Matching Checkout Flow */}
+      {/* Header */}
       <header className="border-b border-zinc-100 bg-white sticky top-0 z-50">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
-          <Link
-            href="/"
-            className="text-left"
-          >
+          <Link href="/" className="text-left">
             <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
               Storefront
             </div>
@@ -84,30 +82,31 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
       </header>
 
       <section className="mx-auto max-w-4xl px-4 py-12 md:px-6 lg:py-20">
-        {/* Success Confirmation Hero */}
+        {/* Pending Confirmation Hero */}
         <div className="text-center mb-16 space-y-4">
-          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-black text-white mb-6 animate-in zoom-in duration-500">
-            <Check className="h-10 w-10 stroke-[3]" />
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-amber-500 text-white mb-6 animate-pulse">
+            <Clock className="h-10 w-10 stroke-[2.5]" />
           </div>
           <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none">
-            Your order is confirmed
+            Awaiting Payment
           </h1>
           <p className="text-zinc-500 text-lg max-w-md mx-auto">
-            Thank you for shopping with us. We&apos;ve sent a confirmation email to{" "}
-            <span className="text-black font-bold">{order.customerEmail}</span>{" "}
-            with your order details.
+            Your order #{order.orderNumber} has been created. Please complete your payment to confirm your order.
           </p>
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button
-              asChild
-              className="h-14 rounded-none px-10 text-sm font-bold uppercase tracking-widest transition-all bg-black text-white hover:bg-zinc-800"
-            >
-              <Link href={`/account/orders/${order.id}`}>Track Your Order</Link>
-            </Button>
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+            {order.snapUrl && (
+              <Button
+                asChild
+                className="h-14 rounded-none bg-emerald-600 px-10 text-sm font-bold uppercase tracking-widest text-white hover:bg-emerald-700 transition-all w-full sm:w-auto"
+              >
+                <Link href={order.snapUrl}>Complete Payment</Link>
+              </Button>
+            )}
+            <RefreshStatusButton orderId={order.id} />
             <Button
               asChild
               variant="outline"
-              className="h-14 rounded-none border-2 border-zinc-200 px-10 text-sm font-bold uppercase tracking-widest hover:bg-zinc-50 transition-all"
+              className="h-14 rounded-none border-2 border-zinc-200 px-10 text-sm font-bold uppercase tracking-widest hover:bg-zinc-50 transition-all w-full sm:w-auto"
             >
               <Link href="/">Back to Home</Link>
             </Button>
@@ -145,7 +144,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
                   <p className="text-zinc-400 uppercase font-bold text-[10px] tracking-widest mb-1">
                     Status
                   </p>
-                  <span className="inline-block px-2 py-0.5 bg-zinc-100 text-[10px] font-black uppercase tracking-tighter">
+                  <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-800 text-[10px] font-black uppercase tracking-tighter">
                     {order.status}
                   </span>
                 </div>
@@ -265,7 +264,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
 
               <div className="p-6 border-t border-zinc-200 flex items-center justify-between bg-white">
                 <span className="text-xl font-black uppercase tracking-tighter">
-                  Total Paid
+                  Total Amount
                 </span>
                 <div className="text-right">
                   <span className="text-xs text-zinc-400 font-bold mr-2 uppercase tracking-widest">

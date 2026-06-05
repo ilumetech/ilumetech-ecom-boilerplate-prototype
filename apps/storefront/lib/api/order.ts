@@ -47,3 +47,13 @@ export async function createOrder(
   });
   return res.data;
 }
+
+export async function refreshOrderStatus(
+  id: string,
+  token: string,
+): Promise<Order> {
+  const res = await apiFetch<{ data: Order }>(`/public/orders/${id}/refresh-status`, token, {
+    method: "POST",
+  });
+  return res.data;
+}

@@ -252,6 +252,59 @@ export class OrderService {
     return this.mapToResponse(order);
   }
 
+  async refreshStatus(id: string, actorId: string): Promise<Order> {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+
+    if (!order) throw new NotFoundException(`Order ${id} not found`);
+
+    if (order.status !== OrderStatus.PENDING) {
+      return this.mapToResponse(order);
+    }
+
+    try {
+      const statusData = await this.midtransService.getTransactionStatus(
+        order.orderNumber,
+      );
+
+      if (!statusData) {
+        return this.mapToResponse(order);
+      }
+
+      const transactionStatus = statusData.transaction_status;
+      const fraudStatus = statusData.fraud_status;
+
+      let nextStatus: OrderStatus | null = null;
+      if (transactionStatus === 'capture') {
+        if (fraudStatus === 'accept') {
+          nextStatus = OrderStatus.CONFIRMED;
+        }
+      } else if (transactionStatus === 'settlement') {
+        nextStatus = OrderStatus.CONFIRMED;
+      } else if (
+        transactionStatus === 'cancel' ||
+        transactionStatus === 'deny' ||
+        transactionStatus === 'expire'
+      ) {
+        nextStatus = OrderStatus.CANCELLED;
+      }
+
+      if (nextStatus) {
+        const updated = await this.updateStatus(order.id, nextStatus, actorId);
+        return updated;
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to refresh status from Midtrans for order ${order.orderNumber}:`,
+        error,
+      );
+    }
+
+    return this.mapToResponse(order);
+  }
+
   async updateStatus(
     id: string,
     nextStatus: OrderStatus,

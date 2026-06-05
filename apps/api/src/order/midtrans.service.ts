@@ -87,9 +87,9 @@ export class MidtransService {
         phone: input.customerDetails.phone,
       },
       callbacks: {
-        finish: `${process.env.STOREFRONT_URL || 'http://localhost:3000'}/success?orderId=${input.orderId}`,
-        unfinish: `${process.env.STOREFRONT_URL || 'http://localhost:3000'}/success?orderId=${input.orderId}`,
-        error: `${process.env.STOREFRONT_URL || 'http://localhost:3000'}/success?orderId=${input.orderId}`,
+        finish: `${process.env.STOREFRONT_URL || 'http://localhost:3000'}/pending?orderId=${input.orderId}`,
+        unfinish: `${process.env.STOREFRONT_URL || 'http://localhost:3000'}/pending?orderId=${input.orderId}`,
+        error: `${process.env.STOREFRONT_URL || 'http://localhost:3000'}/pending?orderId=${input.orderId}`,
       },
     };
 
@@ -110,6 +110,41 @@ export class MidtransService {
     }
 
     return response.json() as Promise<MidtransTransactionResponse>;
+  }
+
+  async getTransactionStatus(orderId: string): Promise<any> {
+    if (!this.serverKey) {
+      this.logger.warn('MIDTRANS_SERVER_KEY is not defined. Returning dummy transaction status.');
+      return {
+        transaction_status: 'settlement',
+        fraud_status: 'accept',
+      };
+    }
+
+    const baseUrl = this.isProduction
+      ? 'https://api.midtrans.com/v2'
+      : 'https://api.sandbox.midtrans.com/v2';
+    const url = `${baseUrl}/${orderId}/status`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${Buffer.from(this.serverKey + ':').toString('base64')}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      this.logger.error(`Midtrans API getTransactionStatus error: ${response.status} - ${errorText}`);
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Midtrans API status error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
   }
 
   verifyNotificationSignature(body: any): boolean {

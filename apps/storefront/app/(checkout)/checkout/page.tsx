@@ -198,14 +198,13 @@ export default function CheckoutPage() {
         if (snap) {
           snap.pay(order.snapToken, {
             onSuccess: () => {
-              router.push(`/success?orderId=${order.id}`);
+              router.push(`/pending?orderId=${order.id}`);
             },
             onPending: () => {
-              router.push(`/success?orderId=${order.id}`);
+              router.push(`/pending?orderId=${order.id}`);
             },
             onError: () => {
-              setIsSubmitting(false);
-              alert("Payment failed. Please try again or choose a different payment method.");
+              router.push(`/pending?orderId=${order.id}`);
             },
             onClose: () => {
               // User closed the payment popup without completing — allow retry
@@ -214,12 +213,12 @@ export default function CheckoutPage() {
           });
         } else {
           // Fallback if Snap script is not loaded
-          window.location.href = order.snapUrl || `/success?orderId=${order.id}`;
+          window.location.href = order.snapUrl || `/pending?orderId=${order.id}`;
         }
       } else if (order.snapUrl) {
         window.location.href = order.snapUrl;
       } else {
-        router.push(`/success?orderId=${order.id}`);
+        router.push(`/pending?orderId=${order.id}`);
       }
     } catch (e: any) {
       console.error(e);
