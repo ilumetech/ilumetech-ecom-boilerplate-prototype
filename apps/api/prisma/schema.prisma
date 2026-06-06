@@ -291,6 +291,8 @@ model Order {
   totalAmount     Decimal
   promoCode       String?
   shippingMethod  String?
+  shippingCourier String?
+  trackingCode    String?
   shippingAddress Json
   snapToken       String?
   snapUrl         String?

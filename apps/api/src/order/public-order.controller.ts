@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   NotFoundException,
+  BadRequestException,
   Param,
   Post,
   Query,
@@ -13,11 +14,15 @@ import { ClerkAuthGuard } from '../common/guards/clerk-auth.guard';
 import type { ClerkUser } from '../common/types/clerk.types';
 import { CreateOrderDto, QueryOrderDto } from './dto';
 import { OrderService } from './order.service';
+import { TrackingService } from '../tracking/tracking.service';
 
 @Controller('public/orders')
 @UseGuards(ClerkAuthGuard)
 export class PublicOrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(
+    private readonly orderService: OrderService,
+    private readonly trackingService: TrackingService,
+  ) {}
 
   @Post()
   async create(@CurrentUser() user: ClerkUser, @Body() dto: CreateOrderDto) {
@@ -39,6 +44,26 @@ export class PublicOrderController {
     }
 
     return { data: order };
+  }
+
+  @Get(':id/track')
+  async track(@CurrentUser() user: ClerkUser, @Param('id') id: string) {
+    const order = await this.orderService.findOne(id);
+
+    if (order.customerId !== user.sub) {
+      throw new NotFoundException(`Order ${id} not found`);
+    }
+
+    if (!order.trackingCode) {
+      throw new BadRequestException('Order does not have a tracking code yet');
+    }
+
+    const trackingData = await this.trackingService.track(
+      order.shippingCourier ?? null,
+      order.trackingCode,
+    );
+
+    return { data: trackingData };
   }
 
   @Post(':id/refresh-status')

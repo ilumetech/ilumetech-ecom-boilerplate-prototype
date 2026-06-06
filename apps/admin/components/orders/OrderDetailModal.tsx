@@ -1,11 +1,13 @@
 "use client";
 
-import { App, Descriptions, Modal, Select, Spin, Table, Tag } from "antd";
+import { useEffect, useState } from "react";
+import { App, Button, Descriptions, Input, Modal, Select, Space, Spin, Table, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TableColumnsType } from "antd";
 import type { Order, OrderItem, OrderStatus } from "@ilumetech/types";
 import { PERMISSIONS } from "@ilumetech/types";
 import { Can } from "@/components/auth/Can";
+import { useCan } from "@/lib/hooks/use-can";
 import { orderApi } from "@/lib/api/order";
 import { ORDER_LABELS } from "@/lib/labels/order";
 import { handleError } from "@/lib/utils/handle-error";
@@ -55,6 +57,35 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
   function handleStatusChange(status: OrderStatus) {
     if (!order || status === order.status) return;
     updateStatusMutation.mutate(status);
+  }
+
+  const canUpdate = useCan(PERMISSIONS.ORDER.UPDATE);
+  const [courierInput, setCourierInput] = useState("");
+  const [trackingCodeInput, setTrackingCodeInput] = useState("");
+
+  useEffect(() => {
+    if (order) {
+      setCourierInput(order.shippingCourier || "");
+      setTrackingCodeInput(order.trackingCode || "");
+    }
+  }, [order]);
+
+  const updateTrackingMutation = useMutation({
+    mutationFn: (payload: { shippingCourier: string | null; trackingCode: string | null }) =>
+      orderApi.updateTracking(orderId!, payload.shippingCourier, payload.trackingCode),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["orders", "list"] });
+      queryClient.setQueryData(["orders", "detail", orderId], response.data);
+      message.success("Informasi resi pengiriman berhasil diperbarui");
+    },
+    onError: handleError,
+  });
+
+  function handleUpdateTracking() {
+    updateTrackingMutation.mutate({
+      shippingCourier: courierInput.trim() || null,
+      trackingCode: trackingCodeInput.trim() || null,
+    });
   }
 
   return (
@@ -108,6 +139,39 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
             </Descriptions.Item>
             <Descriptions.Item label={ORDER_LABELS.shippingMethod}>
               {order.shippingMethod ?? "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label={ORDER_LABELS.shippingCourier}>
+              {canUpdate ? (
+                <Input
+                  value={courierInput}
+                  onChange={(e) => setCourierInput(e.target.value)}
+                  placeholder="Contoh: JNE, Sicepat, GoSend"
+                  style={{ maxWidth: 200 }}
+                />
+              ) : (
+                order.shippingCourier ?? "—"
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label={ORDER_LABELS.trackingCode}>
+              {canUpdate ? (
+                <Space>
+                  <Input
+                    value={trackingCodeInput}
+                    onChange={(e) => setTrackingCodeInput(e.target.value)}
+                    placeholder="Masukkan Nomor Resi"
+                    style={{ maxWidth: 250 }}
+                  />
+                  <Button
+                    type="primary"
+                    onClick={handleUpdateTracking}
+                    loading={updateTrackingMutation.isPending}
+                  >
+                    Simpan Resi
+                  </Button>
+                </Space>
+              ) : (
+                order.trackingCode ?? "—"
+              )}
             </Descriptions.Item>
             <Descriptions.Item label={ORDER_LABELS.shippingAddress}>
               {formatAddress(order)}

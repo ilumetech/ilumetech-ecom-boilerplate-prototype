@@ -24,6 +24,7 @@ import { ProductReviewModule } from './product-review/product-review.module';
 import { CustomerModule } from './customer/customer.module';
 import { OrderModule } from './order/order.module';
 import { AddressModule } from './address/address.module';
+import { TrackingModule } from './tracking/tracking.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { AddressModule } from './address/address.module';
     CustomerModule,
     OrderModule,
     AddressModule,
+    TrackingModule,
   ],
   controllers: [AppController],
   providers: [

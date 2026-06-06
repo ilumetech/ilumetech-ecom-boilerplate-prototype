@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { getCustomerOrder } from "@/lib/api/order-server";
 import { OrderItemReviewButton } from "@/components/order/order-item-review-button";
 import { RefreshStatusButton } from "@/components/order/refresh-status-button";
+import { OrderTrackingModalButton } from "@/components/order/order-tracking-modal-button";
 
 interface TimelineItem {
   title: string;
@@ -149,11 +150,10 @@ function getTrackingNumber(order: any): string {
   if (order.status === "PENDING" || order.status === "CANCELLED") {
     return "N/A";
   }
-  if (order.status === "CONFIRMED") {
+  if (order.status === "CONFIRMED" && !order.trackingCode) {
     return "Pending pickup";
   }
-  const cleanNum = order.orderNumber.replace(/[^0-9]/g, "");
-  return `JNE${cleanNum || "123456789"}`;
+  return order.trackingCode || "Preparing shipment";
 }
 
 function getEstimatedArrival(order: any): string {
@@ -367,15 +367,29 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
           {/* Tracking timeline card */}
           <Card className="border-zinc-200 rounded-none shadow-none relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1.5 h-full bg-black"></div>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-bold uppercase flex items-center gap-2">
                 <Truck className="h-5 w-5 text-zinc-500" />
                 Shipping & Tracking Status
               </CardTitle>
+              {order.trackingCode && (
+                <OrderTrackingModalButton
+                  orderId={order.id}
+                  trackingCode={order.trackingCode}
+                  shippingCourier={order.shippingCourier}
+                />
+              )}
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
-                <OrderMeta label="Courier" value={order.shippingMethod || "Standard Delivery"} />
+                <OrderMeta
+                  label="Courier"
+                  value={
+                    order.shippingCourier
+                      ? `${order.shippingCourier} (${order.shippingMethod || "Standard"})`
+                      : order.shippingMethod || "Standard Delivery"
+                  }
+                />
                 <OrderMeta label="Tracking Number" value={getTrackingNumber(order)} />
                 <OrderMeta label="Estimated Arrival" value={getEstimatedArrival(order)} />
                 <OrderMeta label="Destination" value={fullAddress} />

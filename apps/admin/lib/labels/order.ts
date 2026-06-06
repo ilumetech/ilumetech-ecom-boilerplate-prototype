@@ -10,6 +10,8 @@ export const ORDER_LABELS = {
   totalAmount: "Total",
   promoCode: "Kode Promo",
   shippingMethod: "Metode Pengiriman",
+  shippingCourier: "Kurir Pengiriman",
+  trackingCode: "Nomor Resi (AWB)",
   shippingAddress: "Alamat Pengiriman",
   items: "Item Pesanan",
   createdAt: "Tanggal Pesanan",

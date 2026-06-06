@@ -40,8 +40,21 @@ async function updateStatus(
   return response.data;
 }
 
+async function updateTracking(
+  id: string,
+  shippingCourier: string | null,
+  trackingCode: string | null,
+): Promise<ApiResponse<Order>> {
+  const response = await apiClient.patch<ApiResponse<Order>>(
+    `/orders/${id}/tracking`,
+    { shippingCourier, trackingCode },
+  );
+  return response.data;
+}
+
 export const orderApi = {
   getAll,
   getById,
   updateStatus,
+  updateTracking,
 };

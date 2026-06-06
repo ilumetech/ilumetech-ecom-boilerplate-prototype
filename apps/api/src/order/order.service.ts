@@ -14,7 +14,11 @@ import {
 import type { Order, OrderAddress, PaginatedResponse } from '@ilumetech/types';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { buildPaginationMeta, buildPrismaQuery } from '../common/utils';
-import type { CreateOrderDto, QueryOrderDto } from './dto';
+import type {
+  CreateOrderDto,
+  QueryOrderDto,
+  UpdateOrderTrackingDto,
+} from './dto';
 import { MidtransService } from './midtrans.service';
 
 type OrderWithItems = Prisma.OrderGetPayload<{
@@ -336,6 +340,22 @@ export class OrderService {
         data: { status: nextStatus },
         include: { items: true },
       });
+    });
+
+    return this.mapToResponse(order);
+  }
+
+  async updateTracking(
+    id: string,
+    dto: UpdateOrderTrackingDto,
+  ): Promise<Order> {
+    const order = await this.prisma.order.update({
+      where: { id },
+      data: {
+        shippingCourier: dto.shippingCourier ?? null,
+        trackingCode: dto.trackingCode ?? null,
+      },
+      include: { items: true },
     });
 
     return this.mapToResponse(order);
@@ -740,6 +760,8 @@ export class OrderService {
       totalAmount: order.totalAmount.toNumber(),
       promoCode: order.promoCode,
       shippingMethod: order.shippingMethod,
+      shippingCourier: order.shippingCourier,
+      trackingCode: order.trackingCode,
       shippingAddress: this.mapShippingAddress(order.shippingAddress),
       snapToken: order.snapToken,
       snapUrl: order.snapUrl,

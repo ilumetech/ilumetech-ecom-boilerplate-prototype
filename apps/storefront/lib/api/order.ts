@@ -57,3 +57,30 @@ export async function refreshOrderStatus(
   });
   return res.data;
 }
+
+export interface TrackingHistoryItem {
+  date: string;
+  description: string;
+}
+
+export interface TrackingResult {
+  courier: string;
+  trackingCode: string;
+  status: string;
+  sender?: string;
+  destination?: string;
+  shippingDate?: string;
+  recipient?: string;
+  history: TrackingHistoryItem[];
+}
+
+export async function getOrderTracking(
+  orderId: string,
+  token: string,
+): Promise<TrackingResult> {
+  const res = await apiFetch<{ data: TrackingResult }>(
+    `/public/orders/${orderId}/track`,
+    token,
+  );
+  return res.data;
+}

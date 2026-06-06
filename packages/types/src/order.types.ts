@@ -45,6 +45,8 @@ export interface Order {
   totalAmount: number;
   promoCode: string | null;
   shippingMethod: string | null;
+  shippingCourier?: string | null;
+  trackingCode?: string | null;
   shippingAddress: OrderAddress;
   snapToken?: string | null;
   snapUrl?: string | null;
