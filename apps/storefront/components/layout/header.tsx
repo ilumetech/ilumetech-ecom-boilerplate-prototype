@@ -83,7 +83,7 @@ export function Header(_props: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-black text-white">
-      <div className="border-b border-zinc-800 bg-black">
+      <div className="bg-black">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 md:px-6 lg:h-16">
           <Sheet>
             <SheetTrigger asChild>

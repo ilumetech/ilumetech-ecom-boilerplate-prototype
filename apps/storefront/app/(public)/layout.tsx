@@ -9,7 +9,7 @@ export default function PublicLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <Suspense fallback={<div className="h-14 lg:h-16 bg-black border-b border-zinc-800" />}>
+      <Suspense fallback={<div className="h-14 lg:h-16 bg-black" />}>
         <Header cartCount={0} />
       </Suspense>
       <main className="flex-1">{children}</main>

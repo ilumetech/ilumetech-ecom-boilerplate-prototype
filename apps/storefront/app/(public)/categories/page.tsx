@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getProductCategories } from "@/lib/api/category";
 
 export const metadata: Metadata = {
-  title: "Shop by Category | Storefront Official Store",
+  title: "Shop by Category | Shoeting Stars Official Store",
   description: "Browse our collections of premium shoes and sneakers by category. Find sneakers, running shoes, slides, and casual footwear.",
 };
 

@@ -16,7 +16,7 @@ import { getCustomerOrder } from "@/lib/api/order-server";
 import { RefreshStatusButton } from "@/components/order/refresh-status-button";
 
 export const metadata: Metadata = {
-  title: "Payment Pending | Storefront",
+  title: "Payment Pending | Shoeting Stars",
   description: "Awaiting payment confirmation.",
 };
 
@@ -65,7 +65,7 @@ export default async function PendingPage({ searchParams }: PendingPageProps) {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
           <Link href="/" className="text-left">
             <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
-              Storefront
+              Shoeting Stars
             </div>
             <div className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.3em] text-zinc-500">
               Official Store

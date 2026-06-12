@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
-  title: "Sign In | Storefront",
+  title: "Sign In | Shoeting Stars",
   description: "Sign in to your customer account",
 };
 
@@ -32,7 +32,7 @@ export default function SignInPage() {
         />
         <div className="relative z-10 space-y-4">
           <div className="text-sm font-semibold uppercase tracking-[0.3em] opacity-80">
-            Storefront Official
+            Shoeting Stars Official
           </div>
           <h1 className="text-4xl font-black uppercase tracking-tight lg:text-5xl font-heading leading-none max-w-md">
             Welcome Back
@@ -52,7 +52,7 @@ export default function SignInPage() {
               Sign In
             </h2>
             <p className="mt-2 text-xs font-bold uppercase tracking-widest text-zinc-500">
-              Access your storefront customer account
+              Access your Shoeting Stars customer account
             </p>
           </div>
 

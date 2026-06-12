@@ -67,7 +67,7 @@ export default function AboutPage() {
 
           <div className="max-w-xl lg:justify-self-end">
             <p className="text-base leading-8 text-zinc-700">
-              Storefront is an official brand store built for people who want
+              Shoeting Stars is an official brand store built for people who want
               simple, versatile, and high-quality products for everyday life. We
               keep the shopping experience clean, direct, and easy — from
               product discovery to checkout and after-sales support.

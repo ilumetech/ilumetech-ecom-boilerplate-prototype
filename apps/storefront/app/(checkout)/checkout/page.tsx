@@ -238,7 +238,7 @@ export default function CheckoutPage() {
               className="text-left"
             >
               <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
-                Storefront
+                Shoeting Stars
               </div>
               <div className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.3em] text-zinc-500">
                 Official Store
@@ -270,7 +270,7 @@ export default function CheckoutPage() {
               className="text-left"
             >
               <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
-                Storefront
+                Shoeting Stars
               </div>
               <div className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.3em] text-zinc-500">
                 Official Store
@@ -313,7 +313,7 @@ export default function CheckoutPage() {
             className="text-left"
           >
             <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
-              Storefront
+              Shoeting Stars
             </div>
             <div className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.3em] text-zinc-500">
               Official Store

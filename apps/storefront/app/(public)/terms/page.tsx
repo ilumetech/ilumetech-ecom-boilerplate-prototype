@@ -6,7 +6,7 @@ const sections = [
   {
     id: "introduction",
     title: "1. Introduction",
-    content: `Welcome to Storefront. These Terms & Conditions govern your use of our website and the purchase of products from our official store. By accessing or using our services, you agree to be bound by these terms. If you do not agree with any part of these terms, please do not use our website.`,
+    content: `Welcome to Shoeting Stars. These Terms & Conditions govern your use of our website and the purchase of products from our official store. By accessing or using our services, you agree to be bound by these terms. If you do not agree with any part of these terms, please do not use our website.`,
   },
   {
     id: "orders",
@@ -31,12 +31,12 @@ const sections = [
   {
     id: "intellectual-property",
     title: "6. Intellectual Property",
-    content: `All content on this website, including text, graphics, logos, images, and software, is the property of Storefront or its content suppliers and is protected by Indonesian and international copyright laws. You may not use, reproduce, or distribute any content without our prior written consent.`,
+    content: `All content on this website, including text, graphics, logos, images, and software, is the property of Shoeting Stars or its content suppliers and is protected by Indonesian and international copyright laws. You may not use, reproduce, or distribute any content without our prior written consent.`,
   },
   {
     id: "limitation-of-liability",
     title: "7. Limitation of Liability",
-    content: `Storefront shall not be liable for any indirect, incidental, special, or consequential damages resulting from the use or inability to use our services or products. Our total liability to you for any claim arising out of these terms shall not exceed the amount paid by you for the product in question.`,
+    content: `Shoeting Stars shall not be liable for any indirect, incidental, special, or consequential damages resulting from the use or inability to use our services or products. Our total liability to you for any claim arising out of these terms shall not exceed the amount paid by you for the product in question.`,
   },
   {
     id: "governing-law",

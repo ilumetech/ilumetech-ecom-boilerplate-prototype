@@ -61,7 +61,7 @@ export default function PrivacyPage() {
             Privacy Policy.
           </h1>
           <p className="mt-8 text-lg leading-8 text-zinc-600 md:text-xl">
-            At Storefront, we take your privacy seriously. This policy explains
+            At Shoeting Stars, we take your privacy seriously. This policy explains
             how we collect, use, and protect your personal information when you
             shop with us.
           </p>
@@ -107,7 +107,7 @@ export default function PrivacyPage() {
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Link
-                href="mailto:privacy@storefront.com"
+                href="mailto:privacy@shoetingstars.com"
                 className="inline-flex h-12 items-center justify-center border border-black bg-black px-8 text-xs font-semibold uppercase tracking-wide text-white hover:bg-zinc-800 transition-colors"
               >
                 Email Privacy Team

@@ -15,7 +15,7 @@ import type { Metadata } from "next";
 import { getCustomerOrder } from "@/lib/api/order-server";
 
 export const metadata: Metadata = {
-  title: "Order Failed | Storefront",
+  title: "Order Failed | Shoeting Stars",
   description: "There was an issue processing your order.",
 };
 
@@ -64,7 +64,7 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
           <Link href="/" className="text-left">
             <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
-              Storefront
+              Shoeting Stars
             </div>
             <div className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.3em] text-zinc-500">
               Official Store

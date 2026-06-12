@@ -80,7 +80,7 @@ export default async function HomePage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row opacity-0 animate-fade-in-up" style={{ animationDelay: "450ms" }}>
               <Button
                 asChild
-                className="h-12 rounded-none bg-white px-9 text-xs font-semibold uppercase tracking-wide text-black transition-all duration-300 hover:bg-zinc-200 hover:shadow-[0_0_20px_rgba(255,255,255,0.25)]"
+                className="h-12 rounded-none bg-white px-9 text-xs font-semibold uppercase tracking-wide text-black transition-all duration-300 hover:bg-zinc-100 hover:shadow-[0_0_25px_rgba(255,255,255,0.45)] hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Link href="/products">Shop Now</Link>
               </Button>
@@ -88,7 +88,7 @@ export default async function HomePage() {
               <Button
                 asChild
                 variant="outline"
-                className="h-12 rounded-none border-white bg-transparent px-9 text-xs font-semibold uppercase tracking-wide text-white transition-all duration-300 hover:bg-white/10 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.15)]"
+                className="h-12 rounded-none border-white bg-transparent px-9 text-xs font-semibold uppercase tracking-wide text-white transition-all duration-300 hover:bg-white hover:text-black hover:shadow-[0_0_25px_rgba(255,255,255,0.35)] hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Link href="/products?category=new-arrival">New Arrival</Link>
               </Button>
