@@ -10,7 +10,7 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Store",
+  title: "Shoeting Stars",
   description: "Online store",
 };
 

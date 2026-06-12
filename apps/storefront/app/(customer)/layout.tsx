@@ -9,7 +9,7 @@ export default function CustomerLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <Suspense fallback={<div className="h-20 lg:h-24 bg-white border-b border-zinc-200" />}>
+      <Suspense fallback={<div className="h-14 lg:h-16 bg-black border-b border-zinc-800" />}>
         <Header cartCount={0} />
       </Suspense>
       <main className="flex-1">{children}</main>

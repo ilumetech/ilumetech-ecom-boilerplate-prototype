@@ -82,28 +82,12 @@ export function Header(_props: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white">
-      <div className="bg-black text-white">
-        <div className="mx-auto flex h-9 max-w-7xl items-center justify-between px-4 text-[11px] uppercase tracking-wide md:px-6">
-          <p>Welcome to Storefront Official Store</p>
-
-          <div className="hidden items-center gap-6 md:flex">
-            <Link
-              href="https://wa.me/6281234567890"
-              className="flex items-center gap-2 hover:opacity-70"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              Order via WhatsApp
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-b border-zinc-200">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 md:px-6 lg:h-24">
+    <header className="sticky top-0 z-50 w-full bg-black text-white">
+      <div className="border-b border-zinc-800 bg-black">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 md:px-6 lg:h-16">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden">
+              <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-zinc-900 hover:text-white">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Open menu</span>
               </Button>
@@ -189,7 +173,7 @@ export function Header(_props: HeaderProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-xs font-semibold uppercase tracking-wide text-black underline-offset-[10px] hover:underline"
+                className="text-xs font-semibold uppercase tracking-wide text-zinc-200 underline-offset-[10px] hover:text-white hover:underline"
               >
                 {item.label}
               </Link>
@@ -201,6 +185,7 @@ export function Header(_props: HeaderProps) {
               variant="ghost"
               size="icon"
               onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className="text-white hover:bg-zinc-900 hover:text-white"
             >
               {isSearchOpen ? (
                 <X className="h-5 w-5" />
@@ -214,7 +199,7 @@ export function Header(_props: HeaderProps) {
               {isSignedIn ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" className="text-white hover:bg-zinc-900 hover:text-white">
                       <User className="h-5 w-5" />
                       <span className="sr-only">Account</span>
                     </Button>
@@ -274,7 +259,7 @@ export function Header(_props: HeaderProps) {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button variant="ghost" size="icon" asChild>
+                <Button variant="ghost" size="icon" asChild className="text-white hover:bg-zinc-900 hover:text-white">
                   <Link href="/sign-in">
                     <User className="h-5 w-5" />
                     <span className="sr-only">Sign In</span>
@@ -285,9 +270,9 @@ export function Header(_props: HeaderProps) {
 
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
+                <Button variant="ghost" size="icon" className="relative text-white hover:bg-zinc-900 hover:text-white">
                   <ShoppingBag className="h-5 w-5" />
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[10px] text-white">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] text-black font-semibold">
                     {isLoaded ? dynamicCartCount : 0}
                   </span>
                   <span className="sr-only">Cart</span>
@@ -302,15 +287,15 @@ export function Header(_props: HeaderProps) {
       </div>
 
       {isSearchOpen && (
-        <div className="border-b border-zinc-200 bg-white px-4 py-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-200">
+        <div className="border-b border-zinc-800 bg-black px-4 py-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-200">
           <form onSubmit={handleSearchSubmit} className="relative mx-auto max-w-7xl">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400" />
             <Input
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products, categories, or brands..."
-              className="h-12 w-full rounded-md border-zinc-200 bg-zinc-50 pl-11 text-base md:h-14 md:text-lg text-black"
+              className="h-12 w-full rounded-md border-zinc-800 bg-zinc-900 pl-11 text-base md:h-14 md:text-lg text-white placeholder:text-zinc-500 focus-visible:ring-zinc-700"
             />
           </form>
         </div>

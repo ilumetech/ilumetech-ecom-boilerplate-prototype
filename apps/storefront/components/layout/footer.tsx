@@ -72,11 +72,11 @@ const paymentMethods = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-zinc-200 bg-white text-black">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 md:grid-cols-2 md:px-6 lg:grid-cols-5 lg:py-12">
+    <footer className="border-t border-zinc-800 bg-black text-white">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-6 md:grid-cols-2 md:px-6 lg:grid-cols-5 lg:py-8">
         <div>
           <BrandLogo />
-          <p className="mt-5 max-w-xs text-sm leading-6 text-zinc-600">
+          <p className="mt-5 max-w-xs text-sm leading-6 text-zinc-400">
             Thank you for trusting us. We’re here to provide the best products
             and experience for you.
           </p>
@@ -123,11 +123,11 @@ export function Footer() {
           <h3 className="text-xs font-bold uppercase tracking-wide">
             Contact Us
           </h3>
-          <ul className="mt-5 space-y-3 text-sm text-zinc-600">
+          <ul className="mt-5 space-y-3 text-sm text-zinc-400">
             {contactItems.map((item) => (
               <li key={item.label}>
                 {item.href ? (
-                  <Link href={item.href} className="hover:text-black">
+                  <Link href={item.href} className="hover:text-white">
                     {item.label}
                   </Link>
                 ) : (
@@ -142,7 +142,7 @@ export function Footer() {
           <h3 className="text-xs font-bold uppercase tracking-wide">
             Payment Method
           </h3>
-          <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-3 text-sm font-bold uppercase text-black sm:grid-cols-4 lg:grid-cols-2">
+          <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-3 text-sm font-bold uppercase text-white sm:grid-cols-4 lg:grid-cols-2">
             {paymentMethods.map((method) => (
               <span key={method}>{method}</span>
             ))}
@@ -150,7 +150,7 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl border-t border-zinc-200 px-4 py-5 text-center text-xs text-zinc-500 md:px-6">
+      <div className="mx-auto max-w-7xl border-t border-zinc-800 px-4 py-5 text-center text-xs text-zinc-500 md:px-6">
         © 2024 STOREFRONT OFFICIAL STORE. All rights reserved.
       </div>
     </footer>
@@ -167,10 +167,10 @@ function FooterLinkColumn({
   return (
     <div>
       <h3 className="text-xs font-bold uppercase tracking-wide">{title}</h3>
-      <ul className="mt-5 space-y-3 text-sm text-zinc-600">
+      <ul className="mt-5 space-y-3 text-sm text-zinc-400">
         {links.map((link) => (
           <li key={link.href}>
-            <Link href={link.href} className="hover:text-black">
+            <Link href={link.href} className="hover:text-white">
               {link.label}
             </Link>
           </li>

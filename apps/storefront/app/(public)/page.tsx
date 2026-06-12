@@ -1,5 +1,6 @@
 // app/page.tsx
 import Link from "next/link";
+import Image from "next/image";
 import { Award, Box, Headphones, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/product/product-card";
@@ -43,39 +44,56 @@ export default async function HomePage() {
 
   return (
     <>
-      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:px-6 lg:grid-cols-2 lg:items-center lg:py-16">
-        <div>
-          <p className="mb-6 text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
-            Official Store
-          </p>
-
-          <h1 className="max-w-xl text-5xl font-black uppercase leading-none tracking-tight md:text-6xl lg:text-7xl">
-            Built for every step.
-          </h1>
-
-          <p className="mt-6 max-w-sm text-base leading-7 text-zinc-700">
-            Comfort, style, and quality sneakers for your everyday moves.
-          </p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button
-              asChild
-              className="h-12 rounded-none bg-black px-9 text-xs font-semibold uppercase tracking-wide text-white hover:bg-zinc-800"
-            >
-              <Link href="/products">Shop Now</Link>
-            </Button>
-
-            <Button
-              asChild
-              variant="outline"
-              className="h-12 rounded-none border-black px-9 text-xs font-semibold uppercase tracking-wide hover:bg-black hover:text-white"
-            >
-              <Link href="/products?category=new-arrival">New Arrival</Link>
-            </Button>
-          </div>
+      <section className="relative w-full h-[600px] md:h-[650px] lg:h-[700px] flex items-center overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/images/hero.png"
+            alt="Hero Background"
+            fill
+            priority
+            className="object-cover object-center"
+          />
+          {/* Elegant Dark Vignette/Overlay for Text Readability without covering the starry details */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent md:from-black/75 md:via-black/35" />
         </div>
 
-        <div className="aspect-[4/3] rounded-md bg-gradient-to-br from-zinc-100 to-zinc-200" />
+        {/* Content */}
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 md:px-6 text-white">
+          <div className="max-w-xl">
+            <p className="mb-6 text-xs font-semibold uppercase tracking-[0.3em] text-zinc-400">
+              Premium Sneakers
+            </p>
+
+            <h1 className="text-5xl font-black uppercase leading-[0.95] tracking-tight md:text-6xl lg:text-7xl text-white">
+              Shoeting<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-400">
+                Stars.
+              </span>
+            </h1>
+
+            <p className="mt-6 max-w-sm text-base leading-7 text-zinc-300">
+              Discover curated collections of elite sneakers designed for ultimate comfort and iconic street style.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button
+                asChild
+                className="h-12 rounded-none bg-white px-9 text-xs font-semibold uppercase tracking-wide text-black transition-all duration-300 hover:bg-zinc-200 hover:shadow-[0_0_20px_rgba(255,255,255,0.25)]"
+              >
+                <Link href="/products">Shop Now</Link>
+              </Button>
+
+              <Button
+                asChild
+                variant="outline"
+                className="h-12 rounded-none border-white bg-transparent px-9 text-xs font-semibold uppercase tracking-wide text-white transition-all duration-300 hover:bg-white/10 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.15)]"
+              >
+                <Link href="/products?category=new-arrival">New Arrival</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="border-y border-zinc-200">
@@ -86,11 +104,10 @@ export default async function HomePage() {
             return (
               <div
                 key={item.title}
-                className={`flex gap-4 py-4 md:px-6 ${
-                  index !== trustItems.length - 1
+                className={`flex gap-4 py-4 md:px-6 ${index !== trustItems.length - 1
                     ? "md:border-r md:border-zinc-200"
                     : ""
-                }`}
+                  }`}
               >
                 <Icon className="h-8 w-8 shrink-0 stroke-[1.5]" />
                 <div>
