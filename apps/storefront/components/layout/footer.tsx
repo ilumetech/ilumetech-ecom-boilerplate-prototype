@@ -151,7 +151,7 @@ export function Footer() {
       </div>
 
       <div className="mx-auto max-w-7xl border-t border-zinc-800 px-4 py-5 text-center text-xs text-zinc-500 md:px-6">
-        © 2024 STOREFRONT OFFICIAL STORE. All rights reserved.
+        © 2024 SHOETING STARS OFFICIAL STORE. All rights reserved.
       </div>
     </footer>
   );
@@ -182,13 +182,12 @@ function FooterLinkColumn({
 
 function BrandLogo() {
   return (
-    <div>
-      <div className="text-lg font-bold uppercase tracking-[0.35em] md:text-xl">
-        Storefront
-      </div>
-      <div className="mt-1 text-[9px] font-medium uppercase tracking-[0.45em] text-zinc-500">
-        Official Store
-      </div>
+    <div className="flex items-center gap-2">
+      <img
+        src="/images/shoeting_stars_logo_white_transparent_HD.png"
+        alt="Shoeting Stars Logo"
+        className="h-20 md:h-24 w-auto object-contain"
+      />
     </div>
   );
 }

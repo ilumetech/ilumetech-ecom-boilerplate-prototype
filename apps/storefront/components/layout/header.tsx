@@ -95,7 +95,7 @@ export function Header(_props: HeaderProps) {
             <SheetContent side="left" className="w-80">
               <SheetHeader>
                 <SheetTitle className="text-left">
-                  <BrandLogo />
+                  <BrandLogo variant="dark" />
                 </SheetTitle>
               </SheetHeader>
 
@@ -173,7 +173,7 @@ export function Header(_props: HeaderProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-xs font-semibold uppercase tracking-wide text-zinc-200 underline-offset-[10px] hover:text-white hover:underline"
+                className="relative py-2 text-xs font-semibold uppercase tracking-wide text-zinc-300 transition-colors duration-300 hover:text-white after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:origin-right after:scale-x-0 after:bg-white after:transition-transform after:duration-300 after:ease-in-out hover:after:origin-left hover:after:scale-x-100"
               >
                 {item.label}
               </Link>
@@ -185,7 +185,7 @@ export function Header(_props: HeaderProps) {
               variant="ghost"
               size="icon"
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="text-white hover:bg-zinc-900 hover:text-white"
+              className="text-white transition-all duration-200 hover:scale-110 active:scale-95 hover:bg-zinc-900 hover:text-white"
             >
               {isSearchOpen ? (
                 <X className="h-5 w-5" />
@@ -199,7 +199,7 @@ export function Header(_props: HeaderProps) {
               {isSignedIn ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-white hover:bg-zinc-900 hover:text-white">
+                    <Button variant="ghost" size="icon" className="text-white transition-all duration-200 hover:scale-110 active:scale-95 hover:bg-zinc-900 hover:text-white">
                       <User className="h-5 w-5" />
                       <span className="sr-only">Account</span>
                     </Button>
@@ -259,7 +259,7 @@ export function Header(_props: HeaderProps) {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button variant="ghost" size="icon" asChild className="text-white hover:bg-zinc-900 hover:text-white">
+                <Button variant="ghost" size="icon" asChild className="text-white transition-all duration-200 hover:scale-110 active:scale-95 hover:bg-zinc-900 hover:text-white">
                   <Link href="/sign-in">
                     <User className="h-5 w-5" />
                     <span className="sr-only">Sign In</span>
@@ -270,9 +270,9 @@ export function Header(_props: HeaderProps) {
 
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative text-white hover:bg-zinc-900 hover:text-white">
+                <Button variant="ghost" size="icon" className="relative text-white transition-all duration-200 hover:scale-110 active:scale-95 hover:bg-zinc-900 hover:text-white">
                   <ShoppingBag className="h-5 w-5" />
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] text-black font-semibold">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] text-black font-semibold transition-transform duration-200 group-hover:scale-110">
                     {isLoaded ? dynamicCartCount : 0}
                   </span>
                   <span className="sr-only">Cart</span>
@@ -304,15 +304,17 @@ export function Header(_props: HeaderProps) {
   );
 }
 
-function BrandLogo() {
+function BrandLogo({ variant = "light" }: { variant?: "light" | "dark" }) {
   return (
-    <div className="text-center lg:text-left">
-      <div className="text-xl font-bold uppercase tracking-[0.35em] md:text-2xl">
-        Storefront
-      </div>
-      <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.45em] text-zinc-500">
-        Official Store
-      </div>
+    <div className="flex items-center gap-2">
+      <img
+        src="/images/shoeting_stars_logo_white_transparent_HD.png"
+        alt="Shoeting Stars Logo"
+        style={{
+          filter: variant === "dark" ? "invert(1)" : "none",
+        }}
+        className="h-12 md:h-16 w-auto object-contain"
+      />
     </div>
   );
 }
