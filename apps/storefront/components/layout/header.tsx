@@ -32,17 +32,8 @@ import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/lib/hooks/use-cart";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { useAuth, useUser } from "@clerk/nextjs";
-
-
-
-const navItems = [
-  { label: "Home", href: "/" },
-  { label: "Men", href: "/products?category=men" },
-  { label: "Women", href: "/products?category=women" },
-  { label: "Sneakers", href: "/products?category=sneakers" },
-  { label: "Sale", href: "/products?category=sale" },
-  { label: "About Us", href: "/about" },
-];
+import { getProductCategories } from "@/lib/api/category";
+import type { ProductCategory } from "@ilumetech/types";
 
 type HeaderProps = {
   cartCount?: number;
@@ -57,6 +48,34 @@ export function Header(_props: HeaderProps) {
   const { cartCount: dynamicCartCount, isLoaded } = useCart();
   const { isSignedIn, signOut } = useAuth();
   const { user } = useUser();
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+
+  useEffect(() => {
+    getProductCategories()
+      .then((data) => {
+        setCategories(data.slice(0, 4));
+      })
+      .catch((err) => {
+        console.error("Failed to load categories in header:", err);
+      });
+  }, []);
+
+  const navItems = [
+    { label: "Home", href: "/" },
+    ...categories.map((cat) => ({
+      label: cat.name,
+      href: `/products?productCategoryId=${cat.id}`,
+    })),
+    ...(categories.length === 0
+      ? [
+          { label: "Men", href: "/products?category=men" },
+          { label: "Women", href: "/products?category=women" },
+          { label: "Sneakers", href: "/products?category=sneakers" },
+          { label: "Sale", href: "/products?category=sale" },
+        ]
+      : []),
+    { label: "About Us", href: "/about" },
+  ];
 
   // Sync state with URL search parameter
   useEffect(() => {
@@ -181,19 +200,56 @@ export function Header(_props: HeaderProps) {
           </nav>
 
           <div className="flex items-center gap-1 md:gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="text-white transition-all duration-200 hover:scale-110 active:scale-95 hover:bg-zinc-900 hover:text-white"
-            >
-              {isSearchOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Search className="h-5 w-5" />
-              )}
-              <span className="sr-only">Search</span>
-            </Button>
+            {/* Desktop search (inline expanding) */}
+            <div className="hidden lg:flex items-center">
+              <form
+                onSubmit={handleSearchSubmit}
+                className={`relative flex items-center transition-all duration-300 ease-in-out ${
+                  isSearchOpen
+                    ? "w-48 xl:w-64 opacity-100 pointer-events-auto mr-1"
+                    : "w-0 opacity-0 pointer-events-none mr-0"
+                }`}
+              >
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                <Input
+                  autoFocus={isSearchOpen}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products..."
+                  className="h-9 w-full rounded-full border-zinc-800 bg-zinc-900 pl-9 pr-3 text-xs text-white placeholder:text-zinc-500 focus-visible:ring-zinc-700"
+                />
+              </form>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                className="text-white transition-all duration-200 hover:scale-110 active:scale-95 hover:bg-zinc-900 hover:text-white"
+              >
+                {isSearchOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Search className="h-5 w-5" />
+                )}
+                <span className="sr-only">Search</span>
+              </Button>
+            </div>
+
+            {/* Mobile search toggle */}
+            <div className="lg:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                className="text-white transition-all duration-200 hover:scale-110 active:scale-95 hover:bg-zinc-900 hover:text-white"
+              >
+                {isSearchOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Search className="h-5 w-5" />
+                )}
+                <span className="sr-only">Search</span>
+              </Button>
+            </div>
 
             <div className="hidden md:block">
               {isSignedIn ? (
@@ -287,15 +343,15 @@ export function Header(_props: HeaderProps) {
       </div>
 
       {isSearchOpen && (
-        <div className="border-b border-zinc-800 bg-black px-4 py-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-200">
-          <form onSubmit={handleSearchSubmit} className="relative mx-auto max-w-7xl">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400" />
+        <div className="lg:hidden border-b border-zinc-800 bg-black px-4 py-3 shadow-sm animate-in fade-in slide-in-from-top-4 duration-200">
+          <form onSubmit={handleSearchSubmit} className="relative mx-auto w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <Input
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products, categories, or brands..."
-              className="h-12 w-full rounded-md border-zinc-800 bg-zinc-900 pl-11 text-base md:h-14 md:text-lg text-white placeholder:text-zinc-500 focus-visible:ring-zinc-700"
+              placeholder="Search products..."
+              className="h-10 w-full rounded-full border-zinc-800 bg-zinc-900 pl-9 text-xs text-white placeholder:text-zinc-500 focus-visible:ring-zinc-700"
             />
           </form>
         </div>
