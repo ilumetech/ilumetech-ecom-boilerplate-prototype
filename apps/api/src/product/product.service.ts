@@ -3,7 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import type {
+  Prisma,
+  ProductVariant as PrismaProductVariant,
+} from '@prisma/client';
 import type { PaginatedResponse, Product } from '@ilumetech/types';
 import { PrismaService } from '../common/prisma/prisma.service';
 import {
@@ -16,6 +19,7 @@ import type {
   CreateProductDto,
   QueryProductDto,
   UpdateProductDto,
+  CreateProductVariantDto,
 } from './dto';
 import { buildVariantPricingData } from './product-variant.utils';
 
@@ -32,6 +36,9 @@ type ProductWithRelations = Prisma.ProductGetPayload<{
       };
     };
     variants: {
+      where: {
+        isActive: true;
+      };
       include: {
         optionValues: {
           include: {
@@ -46,6 +53,12 @@ type ProductWithRelations = Prisma.ProductGetPayload<{
     };
   };
 }>;
+
+type ResolvedVariantInput = {
+  variant: CreateProductVariantDto;
+  optionValueIds: string[];
+  existingVariant?: PrismaProductVariant;
+};
 
 const PRODUCT_INCLUDE = {
   productCategory: true,
@@ -68,6 +81,9 @@ const PRODUCT_INCLUDE = {
     },
   },
   variants: {
+    where: {
+      isActive: true,
+    },
     include: {
       optionValues: {
         include: {
@@ -238,7 +254,7 @@ export class ProductService {
       });
 
       const code = this.formatCode(counter.prefix, counter.lastSeq);
-      const slug = await this.generateUniqueSlug(dto.name, tx);
+      const slug = await this.generateUniqueSlug(dto.slug ?? dto.name, tx);
 
       const product = await tx.product.create({
         data: {
@@ -296,14 +312,14 @@ export class ProductService {
 
       // 2. Create Variants
       if (dto.variants) {
-        for (const v of dto.variants) {
-          const optionValueIds = [
-            ...(v.optionValueIds ?? []),
-            ...(v.tempOptionValueIds
-              ?.map((tid) => tempIdMap[tid])
-              .filter((id): id is string => !!id) ?? []),
-          ];
+        const resolvedVariants = await this.resolveAndValidateVariants(
+          tx,
+          productId,
+          dto.variants,
+          tempIdMap,
+        );
 
+        for (const { variant: v, optionValueIds } of resolvedVariants) {
           await tx.productVariant.create({
             data: {
               productId,
@@ -333,12 +349,12 @@ export class ProductService {
   }
 
   async update(id: string, dto: UpdateProductDto): Promise<Product> {
-    const existing = await this.findOne(id);
+    await this.findOne(id);
     const { options, variants, images, ...productData } = dto;
     const data: Prisma.ProductUncheckedUpdateInput = { ...productData };
 
-    if (dto.name && dto.name !== existing.name && !dto.slug) {
-      data.slug = await this.generateUniqueSlug(dto.name, this.prisma, id);
+    if (dto.slug !== undefined) {
+      data.slug = await this.generateUniqueSlug(dto.slug, this.prisma, id);
     }
 
     const product = await this.prisma.$transaction(async (tx) => {
@@ -431,17 +447,19 @@ export class ProductService {
             const dbVariants = await tx.productVariant.findMany({
               where: { productId: id },
             });
+            const resolvedVariants = await this.resolveAndValidateVariants(
+              tx,
+              id,
+              variants,
+              tempIdMap,
+              dbVariants,
+            );
 
-            for (const v of variants) {
-              const optionValueIds = [
-                ...(v.optionValueIds ?? []),
-                ...(v.tempOptionValueIds
-                  ?.map((tid) => tempIdMap[tid])
-                  .filter((id): id is string => !!id) ?? []),
-              ];
-
-              const existingVariant = dbVariants.find((dv) => dv.sku === v.sku);
-
+            for (const {
+              variant: v,
+              optionValueIds,
+              existingVariant,
+            } of resolvedVariants) {
               if (existingVariant) {
                 await tx.productVariant.update({
                   where: { id: existingVariant.id },
@@ -480,20 +498,16 @@ export class ProductService {
             }
 
             // Delete variants that are no longer in the incoming payload
-            const incomingSkus = new Set(variants.map((v) => v.sku));
+            const incomingVariantIds = new Set(
+              resolvedVariants
+                .map((v) => v.existingVariant?.id)
+                .filter((variantId): variantId is string => !!variantId),
+            );
             const variantsToDelete = dbVariants.filter(
-              (dv) => !incomingSkus.has(dv.sku),
+              (dv) => !incomingVariantIds.has(dv.id),
             );
             if (variantsToDelete.length > 0) {
               const variantIds = variantsToDelete.map((dv) => dv.id);
-              const movementCount = await tx.stockMovement.count({
-                where: { productVariantId: { in: variantIds } },
-              });
-              if (movementCount > 0) {
-                throw new BadRequestException(
-                  'Varian ini memiliki riwayat stok dan tidak dapat dihapus.',
-                );
-              }
               await tx.productVariant.updateMany({
                 where: { id: { in: variantIds } },
                 data: { isActive: false },
@@ -505,18 +519,9 @@ export class ProductService {
           await tx.productOption.deleteMany({ where: { productId: id } });
           const existingVariants = await tx.productVariant.findMany({
             where: { productId: id },
-            select: { id: true },
           });
           const existingVariantIds = existingVariants.map((v) => v.id);
           if (existingVariantIds.length > 0) {
-            const movementCount = await tx.stockMovement.count({
-              where: { productVariantId: { in: existingVariantIds } },
-            });
-            if (movementCount > 0) {
-              throw new BadRequestException(
-                'Varian ini memiliki riwayat stok dan tidak dapat dihapus.',
-              );
-            }
             await tx.productVariant.updateMany({
               where: { productId: id },
               data: { isActive: false },
@@ -524,18 +529,40 @@ export class ProductService {
           }
 
           if (variants && variants.length > 0) {
-            for (const v of variants) {
-              await tx.productVariant.create({
-                data: {
-                  productId: id,
-                  sku: v.sku,
-                  name: v.name,
-                  ...buildVariantPricingData(v),
-                  compareAtPrice: v.compareAtPrice,
-                  imageUrl: v.imageUrl,
-                  isActive: v.isActive ?? true,
-                },
-              });
+            const resolvedVariants = await this.resolveAndValidateVariants(
+              tx,
+              id,
+              variants,
+              {},
+              existingVariants,
+            );
+
+            for (const { variant: v, existingVariant } of resolvedVariants) {
+              const baseVariantData = {
+                sku: v.sku,
+                name: v.name,
+                ...buildVariantPricingData(v),
+                compareAtPrice: v.compareAtPrice,
+                imageUrl: v.imageUrl,
+                isActive: v.isActive ?? true,
+              };
+
+              if (existingVariant) {
+                await tx.productVariant.update({
+                  where: { id: existingVariant.id },
+                  data: {
+                    ...baseVariantData,
+                    optionValues: { deleteMany: {} },
+                  },
+                });
+              } else {
+                await tx.productVariant.create({
+                  data: {
+                    productId: id,
+                    ...baseVariantData,
+                  },
+                });
+              }
             }
           }
         }
@@ -544,10 +571,19 @@ export class ProductService {
         const dbVariants = await tx.productVariant.findMany({
           where: { productId: id },
         });
+        const resolvedVariants = await this.resolveAndValidateVariants(
+          tx,
+          id,
+          variants,
+          {},
+          dbVariants,
+        );
 
-        for (const v of variants) {
-          const existingVariant = dbVariants.find((dv) => dv.sku === v.sku);
-
+        for (const {
+          variant: v,
+          optionValueIds,
+          existingVariant,
+        } of resolvedVariants) {
           if (existingVariant) {
             await tx.productVariant.update({
               where: { id: existingVariant.id },
@@ -559,7 +595,7 @@ export class ProductService {
                 isActive: v.isActive ?? true,
                 optionValues: {
                   deleteMany: {},
-                  create: (v.optionValueIds ?? []).map((ovId) => ({
+                  create: optionValueIds.map((ovId) => ({
                     optionValueId: ovId,
                   })),
                 },
@@ -576,10 +612,9 @@ export class ProductService {
                 imageUrl: v.imageUrl,
                 isActive: v.isActive ?? true,
                 optionValues: {
-                  create:
-                    v.optionValueIds?.map((ovId) => ({
-                      optionValueId: ovId,
-                    })) ?? [],
+                  create: optionValueIds.map((ovId) => ({
+                    optionValueId: ovId,
+                  })),
                 },
               },
             });
@@ -587,20 +622,16 @@ export class ProductService {
         }
 
         // Delete variants that are no longer in the incoming payload
-        const incomingSkus = new Set(variants.map((v) => v.sku));
+        const incomingVariantIds = new Set(
+          resolvedVariants
+            .map((v) => v.existingVariant?.id)
+            .filter((variantId): variantId is string => !!variantId),
+        );
         const variantsToDelete = dbVariants.filter(
-          (dv) => !incomingSkus.has(dv.sku),
+          (dv) => !incomingVariantIds.has(dv.id),
         );
         if (variantsToDelete.length > 0) {
           const variantIds = variantsToDelete.map((dv) => dv.id);
-          const movementCount = await tx.stockMovement.count({
-            where: { productVariantId: { in: variantIds } },
-          });
-          if (movementCount > 0) {
-            throw new BadRequestException(
-              'Varian ini memiliki riwayat stok dan tidak dapat dihapus.',
-            );
-          }
           await tx.productVariant.updateMany({
             where: { id: { in: variantIds } },
             data: { isActive: false },
@@ -657,7 +688,182 @@ export class ProductService {
 
   async remove(id: string): Promise<void> {
     await this.findOne(id);
-    await this.prisma.product.delete({ where: { id } });
+    await this.prisma.product.update({
+      where: { id },
+      data: { isActive: false },
+    });
+  }
+
+  private async resolveAndValidateVariants(
+    tx: Prisma.TransactionClient,
+    productId: string,
+    variants: CreateProductVariantDto[],
+    tempIdMap: Record<string, string> = {},
+    dbVariants?: PrismaProductVariant[],
+  ): Promise<ResolvedVariantInput[]> {
+    const productVariants =
+      dbVariants ??
+      (await tx.productVariant.findMany({
+        where: { productId },
+      }));
+    const seenSkus = new Set<string>();
+    const seenCombos = new Set<string>();
+
+    const resolvedVariants: ResolvedVariantInput[] = [];
+    for (const variant of variants) {
+      if (seenSkus.has(variant.sku)) {
+        throw new BadRequestException(
+          `Duplicate SKU ${variant.sku} in variant payload`,
+        );
+      }
+      seenSkus.add(variant.sku);
+
+      const existingVariant = this.findExistingVariant(
+        productVariants,
+        variant,
+      );
+
+      if (variant.id && !existingVariant) {
+        throw new BadRequestException(
+          `Variant ${variant.id} does not belong to this product`,
+        );
+      }
+
+      await this.validateSkuIsAvailable(tx, variant, existingVariant);
+
+      const optionValueIds = this.resolveVariantOptionValueIds(
+        variant,
+        tempIdMap,
+      );
+      await this.validateOptionValueIds(tx, productId, optionValueIds);
+
+      const comboKey = this.buildOptionCombinationKey(optionValueIds);
+      if (seenCombos.has(comboKey)) {
+        throw new BadRequestException(
+          'A variant with this option combination already exists',
+        );
+      }
+      seenCombos.add(comboKey);
+
+      resolvedVariants.push({ variant, optionValueIds, existingVariant });
+    }
+
+    await this.validateCombinationsAreAvailable(
+      tx,
+      productId,
+      resolvedVariants,
+    );
+
+    return resolvedVariants;
+  }
+
+  private findExistingVariant(
+    dbVariants: PrismaProductVariant[],
+    variant: CreateProductVariantDto,
+  ): PrismaProductVariant | undefined {
+    if (variant.id) {
+      return dbVariants.find((dbVariant) => dbVariant.id === variant.id);
+    }
+
+    return dbVariants.find((dbVariant) => dbVariant.sku === variant.sku);
+  }
+
+  private async validateSkuIsAvailable(
+    tx: Prisma.TransactionClient,
+    variant: CreateProductVariantDto,
+    existingVariant?: PrismaProductVariant,
+  ): Promise<void> {
+    const skuOwner = await tx.productVariant.findUnique({
+      where: { sku: variant.sku },
+      select: { id: true },
+    });
+
+    if (skuOwner && skuOwner.id !== existingVariant?.id) {
+      throw new BadRequestException(`SKU ${variant.sku} is already in use`);
+    }
+  }
+
+  private resolveVariantOptionValueIds(
+    variant: CreateProductVariantDto,
+    tempIdMap: Record<string, string>,
+  ): string[] {
+    return [
+      ...(variant.optionValueIds ?? []),
+      ...(variant.tempOptionValueIds
+        ?.map((tempId) => tempIdMap[tempId])
+        .filter((id): id is string => !!id) ?? []),
+    ];
+  }
+
+  private async validateOptionValueIds(
+    tx: Prisma.TransactionClient,
+    productId: string,
+    optionValueIds: string[],
+  ): Promise<void> {
+    if (optionValueIds.length === 0) return;
+
+    const optionValues = await tx.productOptionValue.findMany({
+      where: {
+        id: { in: optionValueIds },
+        option: { productId },
+      },
+      select: { optionId: true },
+    });
+
+    if (optionValues.length !== optionValueIds.length) {
+      throw new BadRequestException(
+        'One or more option values do not belong to this product',
+      );
+    }
+
+    const optionIds = optionValues.map((optionValue) => optionValue.optionId);
+    if (new Set(optionIds).size !== optionIds.length) {
+      throw new BadRequestException(
+        'Each variant must have at most one value per option',
+      );
+    }
+  }
+
+  private async validateCombinationsAreAvailable(
+    tx: Prisma.TransactionClient,
+    productId: string,
+    resolvedVariants: ResolvedVariantInput[],
+  ): Promise<void> {
+    const existingVariantIds = resolvedVariants
+      .map((resolvedVariant) => resolvedVariant.existingVariant?.id)
+      .filter((variantId): variantId is string => !!variantId);
+    const incomingComboKeys = new Set(
+      resolvedVariants.map((resolvedVariant) =>
+        this.buildOptionCombinationKey(resolvedVariant.optionValueIds),
+      ),
+    );
+
+    const conflictingVariants = await tx.productVariant.findMany({
+      where: {
+        productId,
+        isActive: true,
+        ...(existingVariantIds.length > 0 && {
+          id: { notIn: existingVariantIds },
+        }),
+      },
+      include: { optionValues: true },
+    });
+
+    for (const variant of conflictingVariants) {
+      const comboKey = this.buildOptionCombinationKey(
+        variant.optionValues.map((optionValue) => optionValue.optionValueId),
+      );
+
+      if (incomingComboKeys.has(comboKey)) {
+        throw new BadRequestException(
+          'A variant with this option combination already exists',
+        );
+      }
+    }
+  }
+
+  private buildOptionCombinationKey(optionValueIds: string[]): string {
+    return [...optionValueIds].sort().join('|');
   }
 
   private formatCode(prefix: string, seq: number): string {
@@ -730,7 +936,7 @@ export class ProductService {
     };
   }
 
-  public mapToPublicResponse(product: any): PublicProduct {
+  public mapToPublicResponse(product: ProductWithRelations): PublicProduct {
     const productResponse = this.mapToResponse(product);
 
     return {

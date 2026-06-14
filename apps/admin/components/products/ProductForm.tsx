@@ -1012,6 +1012,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     const currentDefaultVariant = values.variants?.[0];
 
     const defaultVariant = {
+      id: currentDefaultVariant?.id,
       sku:
         currentDefaultVariant?.sku &&
         !currentDefaultVariant.optionValues?.length
@@ -1054,6 +1055,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         ? values.variants.map((v, index) => {
             const currentVariant = form.getFieldValue(["variants", index]);
             return {
+              id: v.id || currentVariant?.id,
               sku: v.sku,
               name: v.name || currentVariant?.name || "",
               price: v.price,

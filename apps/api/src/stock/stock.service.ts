@@ -211,9 +211,18 @@ export class StockService {
     balanceAfter: number;
     movementQuantity: number;
   }> {
-    const updatedVariant = await tx.productVariant.update({
-      where: { id: productVariantId },
+    const result = await tx.productVariant.updateMany({
+      where: { id: productVariantId, isActive: true },
       data: { stockOnHand: { increment: quantity } },
+    });
+
+    if (result.count === 0) {
+      await this.ensureVariantCanReceiveMovement(productVariantId, tx);
+      throw new BadRequestException('Unable to adjust stock');
+    }
+
+    const updatedVariant = await tx.productVariant.findUniqueOrThrow({
+      where: { id: productVariantId },
       select: { stockOnHand: true },
     });
 
@@ -234,12 +243,16 @@ export class StockService {
     movementQuantity: number;
   }> {
     const result = await tx.productVariant.updateMany({
-      where: { id: productVariantId, stockOnHand: { gte: quantity } },
+      where: {
+        id: productVariantId,
+        isActive: true,
+        stockOnHand: { gte: quantity },
+      },
       data: { stockOnHand: { decrement: quantity } },
     });
 
     if (result.count === 0) {
-      await this.ensureVariantExists(productVariantId, tx);
+      await this.ensureVariantCanReceiveMovement(productVariantId, tx);
       throw new BadRequestException('Insufficient stock');
     }
 
@@ -266,6 +279,23 @@ export class StockService {
 
     if (!variant)
       throw new NotFoundException(`Variant ${productVariantId} not found`);
+  }
+
+  private async ensureVariantCanReceiveMovement(
+    productVariantId: string,
+    tx: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<void> {
+    const variant = await tx.productVariant.findUnique({
+      where: { id: productVariantId },
+      select: { id: true, isActive: true },
+    });
+
+    if (!variant)
+      throw new NotFoundException(`Variant ${productVariantId} not found`);
+
+    if (!variant.isActive) {
+      throw new BadRequestException('Cannot adjust stock for inactive variant');
+    }
   }
 
   private mapVariantToResponse(variant: StockVariantWithProduct): StockVariant {

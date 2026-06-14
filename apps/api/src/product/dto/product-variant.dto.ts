@@ -11,6 +11,10 @@ import { Type } from 'class-transformer';
 import { DiscountMode, DiscountType } from '@prisma/client';
 
 export class CreateProductVariantDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   sku: string;
 

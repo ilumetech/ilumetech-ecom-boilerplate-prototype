@@ -13,7 +13,7 @@ export class ProductVariantService {
 
   async findAll(productId: string) {
     return this.prisma.productVariant.findMany({
-      where: { productId },
+      where: { productId, isActive: true },
       include: {
         optionValues: {
           include: {
@@ -81,7 +81,7 @@ export class ProductVariantService {
 
     // 4. Validate unique combination per product
     const allVariants = await this.prisma.productVariant.findMany({
-      where: { productId },
+      where: { productId, isActive: true },
       include: { optionValues: true },
     });
 
@@ -162,7 +162,7 @@ export class ProductVariantService {
       }
 
       const otherVariants = await this.prisma.productVariant.findMany({
-        where: { productId, id: { not: variantId } },
+        where: { productId, id: { not: variantId }, isActive: true },
         include: { optionValues: true },
       });
 
@@ -245,16 +245,26 @@ export class ProductVariantService {
     if (!hasPricingChange) return {};
 
     const price = dto.price ?? variant.price.toNumber();
-    const finalPrice = dto.finalPrice ?? price;
+    const finalPrice = dto.finalPrice ?? variant.finalPrice.toNumber();
+    const discountType =
+      dto.discountType !== undefined ? dto.discountType : variant.discountType;
+    const discountMode =
+      dto.discountMode !== undefined ? dto.discountMode : variant.discountMode;
+    const discountValue =
+      discountType === null
+        ? null
+        : dto.discountValue !== undefined
+          ? dto.discountValue
+          : (variant.discountValue?.toNumber() ?? null);
 
     return buildVariantPricingData({
       sku: variant.sku,
       name: variant.name,
       price,
       finalPrice,
-      discountType: dto.discountType,
-      discountValue: dto.discountValue,
-      discountMode: dto.discountMode,
+      discountType,
+      discountValue,
+      discountMode,
     });
   }
 }
