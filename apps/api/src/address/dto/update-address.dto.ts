@@ -38,6 +38,14 @@ export class UpdateAddressDto {
   phone?: string;
 
   @IsOptional()
+  @IsString()
+  shippingDestinationCode?: string;
+
+  @IsOptional()
+  @IsString()
+  shippingDestinationLabel?: string;
+
+  @IsOptional()
   @IsBoolean()
   isDefault?: boolean;
 }

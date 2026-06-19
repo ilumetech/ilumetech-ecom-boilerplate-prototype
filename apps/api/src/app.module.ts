@@ -25,6 +25,7 @@ import { CustomerModule } from './customer/customer.module';
 import { OrderModule } from './order/order.module';
 import { AddressModule } from './address/address.module';
 import { TrackingModule } from './tracking/tracking.module';
+import { ShippingModule } from './shipping/shipping.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { TrackingModule } from './tracking/tracking.module';
     OrderModule,
     AddressModule,
     TrackingModule,
+    ShippingModule,
   ],
   controllers: [AppController],
   providers: [

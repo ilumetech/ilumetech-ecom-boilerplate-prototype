@@ -20,6 +20,7 @@ import type {
   UpdateOrderTrackingDto,
 } from './dto';
 import { MidtransService } from './midtrans.service';
+import { ShippingService } from '../shipping/shipping.service';
 
 type OrderWithItems = Prisma.OrderGetPayload<{
   include: {
@@ -58,6 +59,7 @@ export class OrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly midtransService: MidtransService,
+    private readonly shippingService: ShippingService,
   ) {}
 
   async create(customerId: string, dto: CreateOrderDto): Promise<Order> {
@@ -65,7 +67,6 @@ export class OrderService {
 
     const order = await this.prisma.$transaction(async (tx) => {
       await this.ensureCustomer(tx, customerId, dto);
-      await this.saveCustomerAddress(tx, customerId, dto);
 
       const variants = await this.getCheckoutVariants(
         tx,
@@ -108,7 +109,22 @@ export class OrderService {
         dto.promoCode,
         subtotalAmount,
       );
-      const shippingAmount = dto.shippingAmount ?? 0;
+      const shippingQuote = await this.shippingService.getQuote(
+        tx,
+        dto.shippingAddress.shippingDestinationCode,
+        dto.shippingService,
+        orderItems.map((item) => ({
+          quantity: item.dto.quantity,
+          weightGram: item.variant.product.weightGram,
+        })),
+      );
+      await this.saveCustomerAddress(
+        tx,
+        customerId,
+        dto,
+        shippingQuote.destinationLabel,
+      );
+      const shippingAmount = shippingQuote.amount;
       const totalAmount = Math.max(
         0,
         subtotalAmount - discount.amount + shippingAmount,
@@ -127,8 +143,11 @@ export class OrderService {
           shippingAmount,
           totalAmount,
           promoCode: discount.code,
-          shippingMethod: dto.shippingMethod,
-          shippingAddress: this.toShippingAddressJson(dto.shippingAddress),
+          shippingMethod: `JNE ${shippingQuote.service}`,
+          shippingAddress: this.toShippingAddressJson(
+            dto.shippingAddress,
+            shippingQuote.destinationLabel,
+          ),
           items: {
             create: orderItems.map((item) => ({
               productId: item.variant.productId,
@@ -670,7 +689,10 @@ export class OrderService {
       .join(' / ');
   }
 
-  private toShippingAddressJson(address: OrderAddress): Prisma.InputJsonObject {
+  private toShippingAddressJson(
+    address: OrderAddress,
+    shippingDestinationLabel: string,
+  ): Prisma.InputJsonObject {
     return {
       firstName: address.firstName,
       lastName: address.lastName,
@@ -680,6 +702,8 @@ export class OrderService {
       province: address.province,
       postalCode: address.postalCode,
       country: address.country,
+      shippingDestinationCode: address.shippingDestinationCode ?? '',
+      shippingDestinationLabel,
     };
   }
 
@@ -702,6 +726,10 @@ export class OrderService {
       province: this.readString(address.province),
       postalCode: this.readString(address.postalCode),
       country: this.readString(address.country),
+      shippingDestinationCode: this.readString(address.shippingDestinationCode),
+      shippingDestinationLabel: this.readString(
+        address.shippingDestinationLabel,
+      ),
     };
   }
 
@@ -709,7 +737,11 @@ export class OrderService {
     return typeof value === 'string' ? value : '';
   }
 
-  private mapAddressData(dto: CreateOrderDto, customerId: string) {
+  private mapAddressData(
+    dto: CreateOrderDto,
+    customerId: string,
+    shippingDestinationLabel: string,
+  ) {
     const addr = dto.shippingAddress;
     return {
       customerId,
@@ -721,6 +753,8 @@ export class OrderService {
       province: addr.province,
       postalCode: addr.postalCode,
       country: addr.country,
+      shippingDestinationCode: addr.shippingDestinationCode,
+      shippingDestinationLabel,
     };
   }
 
@@ -728,8 +762,13 @@ export class OrderService {
     tx: Prisma.TransactionClient,
     customerId: string,
     dto: CreateOrderDto,
+    shippingDestinationLabel: string,
   ): Promise<void> {
-    const addressData = this.mapAddressData(dto, customerId);
+    const addressData = this.mapAddressData(
+      dto,
+      customerId,
+      shippingDestinationLabel,
+    );
     const existing = await tx.customerAddress.findFirst({
       where: addressData,
     });

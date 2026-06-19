@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Script from "next/script";
 import { ArrowLeft, ChevronRight, Lock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,13 +22,18 @@ import {
 import { useCart } from "@/lib/hooks/use-cart";
 import {
   validatePromoCode,
-  usePromoCode,
   type PromoCodeValidationResult,
 } from "@/lib/api/promo-code";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { createOrder } from "@/lib/api/order";
 import { INDONESIA_DATA } from "@/lib/indonesia-data";
 import { getAddresses, type CustomerAddress } from "@/lib/api/address";
+import {
+  getShippingQuotes,
+  searchShippingDestinations,
+  type ShippingDestination,
+  type ShippingQuote,
+} from "@/lib/api/shipping";
 
 export default function CheckoutPage() {
   const { items: cartItems, clearCart, isLoaded } = useCart();
@@ -36,10 +41,14 @@ export default function CheckoutPage() {
   const { isSignedIn, getToken, isLoaded: isAuthLoaded } = useAuth();
   const { user } = useUser();
 
-  const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
+  const [shippingService, setShippingService] = useState("");
+  const [shippingQuotes, setShippingQuotes] = useState<ShippingQuote[]>([]);
+  const [isLoadingShipping, setIsLoadingShipping] = useState(false);
+  const [shippingError, setShippingError] = useState<string | null>(null);
 
   const [promoCodeInput, setPromoCodeInput] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState<PromoCodeValidationResult | null>(null);
+  const [appliedPromo, setAppliedPromo] =
+    useState<PromoCodeValidationResult | null>(null);
   const [isPromoValidating, setIsPromoValidating] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
 
@@ -54,6 +63,12 @@ export default function CheckoutPage() {
   const [province, setProvince] = useState("DKI Jakarta");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("ID");
+  const [shippingDestinationCode, setShippingDestinationCode] = useState("");
+  const [shippingDestinationSearch, setShippingDestinationSearch] =
+    useState("");
+  const [shippingDestinations, setShippingDestinations] = useState<
+    ShippingDestination[]
+  >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Saved address states
@@ -71,6 +86,8 @@ export default function CheckoutPage() {
     setCity(address.city);
     setPostalCode(address.postalCode);
     setCountry(address.country);
+    setShippingDestinationCode(address.shippingDestinationCode || "");
+    setShippingDestinationSearch(address.shippingDestinationLabel || "");
   }, []);
 
   // Protect route
@@ -105,21 +122,96 @@ export default function CheckoutPage() {
 
   // Pre-populate user details (only if no saved addresses are available)
   useEffect(() => {
-    if (user && savedAddresses.length === 0) {
+    if (!user) return;
+
+    queueMicrotask(() => {
       setEmail(user.primaryEmailAddress?.emailAddress || "");
+      if (savedAddresses.length > 0) return;
       setFirstName(user.firstName || "");
       setLastName(user.lastName || "");
-    } else if (user) {
-      setEmail(user.primaryEmailAddress?.emailAddress || "");
-    }
+    });
   }, [user, savedAddresses]);
+
+  const orderItems = useMemo(
+    () =>
+      cartItems
+        .filter((item) => item.variantId)
+        .map((item) => ({
+          productVariantId: item.variantId as string,
+          quantity: item.quantity,
+        })),
+    [cartItems],
+  );
+
+  useEffect(() => {
+    if (!isSignedIn || shippingDestinationSearch.trim().length < 2) return;
+
+    const timeout = window.setTimeout(async () => {
+      const token = await getToken();
+      if (!token) return;
+
+      try {
+        const destinations = await searchShippingDestinations(
+          shippingDestinationSearch.trim(),
+          token,
+        );
+        setShippingDestinations(destinations);
+      } catch {
+        setShippingDestinations([]);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [getToken, isSignedIn, shippingDestinationSearch]);
+
+  useEffect(() => {
+    if (!shippingDestinationCode || orderItems.length === 0 || !isSignedIn)
+      return;
+
+    void loadShippingQuotes();
+
+    async function loadShippingQuotes() {
+      setIsLoadingShipping(true);
+      setShippingError(null);
+
+      try {
+        const token = await getToken();
+        if (!token) throw new Error("Authentication token is unavailable");
+        const quotes = await getShippingQuotes(
+          shippingDestinationCode,
+          orderItems,
+          token,
+        );
+        setShippingQuotes(quotes);
+        setShippingService((current) => {
+          const stillAvailable = quotes.some(
+            (quote) => quote.service === current,
+          );
+          return stillAvailable ? current : quotes[0]?.service || "";
+        });
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to calculate shipping";
+        setShippingQuotes([]);
+        setShippingService("");
+        setShippingError(message);
+      } finally {
+        setIsLoadingShipping(false);
+      }
+    }
+  }, [getToken, isSignedIn, orderItems, shippingDestinationCode]);
 
   const subtotal = cartItems.reduce(
     (total, item) => total + item.price * item.quantity,
     0,
   );
   const discount = appliedPromo ? appliedPromo.discountAmount : 0;
-  const shipping = shippingMethod === "standard" ? 50000 : 100000;
+  const selectedShippingQuote = shippingQuotes.find(
+    (quote) => quote.service === shippingService,
+  );
+  const shipping = selectedShippingQuote?.amount ?? 0;
   const total = Math.max(0, subtotal - discount + shipping);
 
   const handleApplyPromo = async () => {
@@ -129,8 +221,8 @@ export default function CheckoutPage() {
     try {
       const result = await validatePromoCode(promoCodeInput.trim(), subtotal);
       setAppliedPromo(result);
-    } catch (e: any) {
-      setPromoError(e.message || "Failed to apply promo code");
+    } catch (error: unknown) {
+      setPromoError(getErrorMessage(error, "Failed to apply promo code"));
       setAppliedPromo(null);
     } finally {
       setIsPromoValidating(false);
@@ -149,8 +241,21 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!email || !firstName || !lastName || !addressLine1 || !city || !province || !postalCode || !phone) {
+    if (
+      !email ||
+      !firstName ||
+      !lastName ||
+      !addressLine1 ||
+      !city ||
+      !province ||
+      !postalCode ||
+      !phone
+    ) {
       alert("Please fill in all required shipping and contact details.");
+      return;
+    }
+    if (!shippingDestinationCode || !shippingService) {
+      alert("Please select a JNE shipping destination and service.");
       return;
     }
 
@@ -158,13 +263,6 @@ export default function CheckoutPage() {
     try {
       const token = await getToken();
       if (!token) throw new Error("Could not retrieve authentication token.");
-
-      const orderItems = cartItems
-        .filter((item) => item.variantId)
-        .map((item) => ({
-          productVariantId: item.variantId!,
-          quantity: item.quantity,
-        }));
 
       if (orderItems.length === 0) {
         throw new Error("No valid variants in the cart to place an order.");
@@ -184,9 +282,10 @@ export default function CheckoutPage() {
           province,
           postalCode,
           country,
+          shippingDestinationCode,
         },
-        shippingMethod: shippingMethod === "standard" ? "Standard Delivery" : "Express Delivery",
-        shippingAmount: shipping,
+        shippingMethod: `JNE ${shippingService}`,
+        shippingService,
         promoCode: appliedPromo?.code || undefined,
       };
 
@@ -194,7 +293,7 @@ export default function CheckoutPage() {
 
       clearCart();
       if (order.snapToken) {
-        const snap = (window as any).snap;
+        const snap = (window as Window & { snap?: MidtransSnap }).snap;
         if (snap) {
           snap.pay(order.snapToken, {
             onSuccess: () => {
@@ -213,16 +312,17 @@ export default function CheckoutPage() {
           });
         } else {
           // Fallback if Snap script is not loaded
-          window.location.href = order.snapUrl || `/pending?orderId=${order.id}`;
+          window.location.href =
+            order.snapUrl || `/pending?orderId=${order.id}`;
         }
       } else if (order.snapUrl) {
         window.location.href = order.snapUrl;
       } else {
         router.push(`/pending?orderId=${order.id}`);
       }
-    } catch (e: any) {
-      console.error(e);
-      alert(e.message || "Failed to place order. Please try again.");
+    } catch (error: unknown) {
+      console.error(error);
+      alert(getErrorMessage(error, "Failed to place order. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
@@ -233,10 +333,7 @@ export default function CheckoutPage() {
       <main className="min-h-screen bg-zinc-50 text-black flex flex-col">
         <header className="border-b border-zinc-200 bg-white">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
-            <Link
-              href="/"
-              className="text-left"
-            >
+            <Link href="/" className="text-left">
               <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
                 Storefront
               </div>
@@ -265,10 +362,7 @@ export default function CheckoutPage() {
       <main className="min-h-screen bg-zinc-50 text-black flex flex-col">
         <header className="border-b border-zinc-200 bg-white">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
-            <Link
-              href="/"
-              className="text-left"
-            >
+            <Link href="/" className="text-left">
               <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
                 Storefront
               </div>
@@ -294,9 +388,7 @@ export default function CheckoutPage() {
             asChild
             className="mt-8 rounded-none bg-black px-8 py-6 text-xs font-semibold uppercase tracking-wide text-white hover:bg-zinc-800"
           >
-            <Link href="/products">
-              Browse Products
-            </Link>
+            <Link href="/products">Browse Products</Link>
           </Button>
         </div>
       </main>
@@ -308,10 +400,7 @@ export default function CheckoutPage() {
       {/* Checkout Header */}
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
-          <Link
-            href="/"
-            className="text-left"
-          >
+          <Link href="/" className="text-left">
             <div className="text-lg font-bold uppercase tracking-[0.25em] md:text-xl">
               Storefront
             </div>
@@ -393,6 +482,10 @@ export default function CheckoutPage() {
                           setPostalCode("");
                           setProvince("DKI Jakarta");
                           setCity("Jakarta Pusat");
+                          setShippingDestinationCode("");
+                          setShippingDestinationSearch("");
+                          setShippingQuotes([]);
+                          setShippingService("");
                         } else {
                           const addr = savedAddresses.find((a) => a.id === val);
                           if (addr) {
@@ -411,7 +504,9 @@ export default function CheckoutPage() {
                             value={addr.id}
                             className="text-xs uppercase font-medium tracking-wide"
                           >
-                            {addr.firstName} {addr.lastName} - {addr.addressLine1}, {addr.city} {addr.isDefault ? "(Default)" : ""}
+                            {addr.firstName} {addr.lastName} -{" "}
+                            {addr.addressLine1}, {addr.city}{" "}
+                            {addr.isDefault ? "(Default)" : ""}
                           </SelectItem>
                         ))}
                         <SelectItem
@@ -426,7 +521,6 @@ export default function CheckoutPage() {
                 )}
               </div>
               <div className="space-y-4">
-
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="firstName" className="sr-only">
@@ -456,8 +550,6 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-
-
                 <div className="grid gap-2">
                   <Label htmlFor="address" className="sr-only">
                     Address
@@ -470,6 +562,57 @@ export default function CheckoutPage() {
                     required
                     className="h-12 rounded-none border-zinc-300 bg-white"
                   />
+                </div>
+
+                <div className="grid gap-3">
+                  <Label
+                    htmlFor="shippingDestinationSearch"
+                    className="text-xs font-semibold uppercase tracking-wide text-zinc-600"
+                  >
+                    JNE Shipping Destination
+                  </Label>
+                  <Input
+                    id="shippingDestinationSearch"
+                    placeholder="Search district, city, or JNE code"
+                    value={shippingDestinationSearch}
+                    onChange={(event) => {
+                      setShippingDestinationSearch(event.target.value);
+                      setShippingDestinationCode("");
+                      setShippingQuotes([]);
+                      setShippingService("");
+                    }}
+                    className="h-12 rounded-none border-zinc-300 bg-white"
+                  />
+                  {shippingDestinationSearch.trim().length >= 2 &&
+                    shippingDestinations.length > 0 && (
+                      <Select
+                        value={shippingDestinationCode}
+                        onValueChange={(code) => {
+                          const destination = shippingDestinations.find(
+                            (item) => item.destinationCode === code,
+                          );
+                          setShippingDestinationCode(code);
+                          setShippingDestinationSearch(
+                            destination?.destinationLabel || code,
+                          );
+                        }}
+                      >
+                        <SelectTrigger className="h-12 w-full rounded-none border-zinc-300 bg-white text-left">
+                          <SelectValue placeholder="Select the exact JNE destination" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px] rounded-none border-zinc-200">
+                          {shippingDestinations.map((destination) => (
+                            <SelectItem
+                              key={destination.destinationCode}
+                              value={destination.destinationCode}
+                            >
+                              {destination.destinationLabel} (
+                              {destination.destinationCode})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                 </div>
 
                 <div className="grid gap-2">
@@ -567,47 +710,52 @@ export default function CheckoutPage() {
                 Shipping Method
               </h2>
               <RadioGroup
-                value={shippingMethod}
-                onValueChange={(val) => setShippingMethod(val as "standard" | "express")}
+                value={shippingService}
+                onValueChange={setShippingService}
                 className="grid gap-3"
               >
-                <Card className="rounded-none border-zinc-300 shadow-none [&:has([data-state=checked])]:border-black [&:has([data-state=checked])]:bg-zinc-50">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem
-                        value="standard"
-                        id="standard"
-                        className="text-black"
-                      />
-                      <Label
-                        htmlFor="standard"
-                        className="font-semibold cursor-pointer"
-                      >
-                        Standard Delivery
-                      </Label>
-                    </div>
-                    <span className="font-semibold">{formatPrice(50000)}</span>
-                  </CardContent>
-                </Card>
-                <Card className="rounded-none border-zinc-300 shadow-none [&:has([data-state=checked])]:border-black [&:has([data-state=checked])]:bg-zinc-50">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem
-                        value="express"
-                        id="express"
-                        className="text-black"
-                      />
-                      <Label
-                        htmlFor="express"
-                        className="font-semibold cursor-pointer"
-                      >
-                        Express Delivery
-                      </Label>
-                    </div>
-                    <span className="font-semibold">{formatPrice(100000)}</span>
-                  </CardContent>
-                </Card>
+                {shippingQuotes.map((quote) => (
+                  <Card
+                    key={`${quote.service}-${quote.shipmentType}`}
+                    className="rounded-none border-zinc-300 shadow-none [&:has([data-state=checked])]:border-black [&:has([data-state=checked])]:bg-zinc-50"
+                  >
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem
+                          value={quote.service}
+                          id={`shipping-${quote.service}`}
+                          className="text-black"
+                        />
+                        <Label
+                          htmlFor={`shipping-${quote.service}`}
+                          className="cursor-pointer font-semibold"
+                        >
+                          JNE {quote.service}
+                          <span className="ml-2 text-xs font-normal text-zinc-500">
+                            {quote.etd || "Estimate unavailable"}
+                          </span>
+                        </Label>
+                      </div>
+                      <span className="font-semibold">
+                        {formatPrice(quote.amount)}
+                      </span>
+                    </CardContent>
+                  </Card>
+                ))}
               </RadioGroup>
+              {isLoadingShipping && (
+                <p className="text-sm text-zinc-500">Calculating shipping...</p>
+              )}
+              {!isLoadingShipping && !shippingDestinationCode && (
+                <p className="text-sm text-zinc-500">
+                  Select a JNE destination to view available services.
+                </p>
+              )}
+              {shippingError && (
+                <p className="text-sm font-semibold text-red-600">
+                  {shippingError}
+                </p>
+              )}
             </section>
 
             <Separator />
@@ -628,13 +776,16 @@ export default function CheckoutPage() {
                         Secure Payment via Midtrans
                       </p>
                       <p className="text-xs text-zinc-500 mt-0.5">
-                        Supports Credit Card, Virtual Account (Bank Transfer), and e-Wallet (GoPay, ShopeePay, etc.)
+                        Supports Credit Card, Virtual Account (Bank Transfer),
+                        and e-Wallet (GoPay, ShopeePay, etc.)
                       </p>
                     </div>
                   </div>
                   <Separator className="bg-zinc-200" />
                   <p className="text-xs text-zinc-500 leading-relaxed">
-                    After clicking &quot;Pay Now&quot;, you will be securely redirected to Midtrans Payment Gateway to complete your purchase.
+                    After clicking &quot;Pay Now&quot;, you will be securely
+                    redirected to Midtrans Payment Gateway to complete your
+                    purchase.
                   </p>
                 </CardContent>
               </Card>
@@ -652,7 +803,12 @@ export default function CheckoutPage() {
               <Button
                 type="button"
                 onClick={handlePayNow}
-                disabled={isSubmitting}
+                disabled={
+                  isSubmitting ||
+                  isLoadingShipping ||
+                  !shippingDestinationCode ||
+                  !shippingService
+                }
                 className="h-14 rounded-none bg-black px-8 text-sm font-bold uppercase tracking-widest text-white hover:bg-zinc-800 disabled:bg-zinc-700 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Placing Order..." : "Pay Now"}
@@ -747,7 +903,11 @@ export default function CheckoutPage() {
                         <span className="text-sm font-black uppercase tracking-wide">
                           {appliedPromo.code}
                           <span className="ml-2 text-xs font-semibold normal-case text-zinc-500">
-                            ({appliedPromo.discountType === "PERCENTAGE" ? `${appliedPromo.discountValue}% off` : `Rp ${appliedPromo.discountValue.toLocaleString("id-ID")} off`})
+                            (
+                            {appliedPromo.discountType === "PERCENTAGE"
+                              ? `${appliedPromo.discountValue}% off`
+                              : `Rp ${appliedPromo.discountValue.toLocaleString("id-ID")} off`}
+                            )
                           </span>
                         </span>
                       </div>
@@ -780,7 +940,9 @@ export default function CheckoutPage() {
                     <div className="flex justify-between">
                       <span className="text-zinc-600">Shipping</span>
                       <span className="font-semibold">
-                        {formatPrice(shipping)}
+                        {selectedShippingQuote
+                          ? formatPrice(shipping)
+                          : "Calculated after destination"}
                       </span>
                     </div>
                   </div>
@@ -827,4 +989,20 @@ function formatPrice(value: number) {
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+interface MidtransSnap {
+  pay: (
+    token: string,
+    callbacks: {
+      onSuccess: () => void;
+      onPending: () => void;
+      onError: () => void;
+      onClose: () => void;
+    },
+  ) => void;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }

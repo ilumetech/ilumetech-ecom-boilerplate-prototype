@@ -10,6 +10,8 @@ export interface CreateAddressInput {
   postalCode: string;
   country: string;
   phone: string;
+  shippingDestinationCode?: string;
+  shippingDestinationLabel?: string;
   isDefault?: boolean;
 }
 
@@ -23,6 +25,8 @@ export interface UpdateAddressInput {
   postalCode?: string;
   country?: string;
   phone?: string;
+  shippingDestinationCode?: string;
+  shippingDestinationLabel?: string;
   isDefault?: boolean;
 }
 
@@ -38,13 +42,18 @@ export interface CustomerAddress {
   postalCode: string;
   country: string;
   phone: string | null;
+  shippingDestinationCode: string | null;
+  shippingDestinationLabel: string | null;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 export async function getAddresses(token: string): Promise<CustomerAddress[]> {
-  const res = await apiFetch<{ data: CustomerAddress[] }>("/public/addresses", token);
+  const res = await apiFetch<{ data: CustomerAddress[] }>(
+    "/public/addresses",
+    token,
+  );
   return res.data;
 }
 
@@ -52,10 +61,14 @@ export async function createAddress(
   data: CreateAddressInput,
   token: string,
 ): Promise<CustomerAddress> {
-  const res = await apiFetch<{ data: CustomerAddress }>("/public/addresses", token, {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
+  const res = await apiFetch<{ data: CustomerAddress }>(
+    "/public/addresses",
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    },
+  );
   return res.data;
 }
 
@@ -64,10 +77,14 @@ export async function updateAddress(
   data: UpdateAddressInput,
   token: string,
 ): Promise<CustomerAddress> {
-  const res = await apiFetch<{ data: CustomerAddress }>(`/public/addresses/${id}`, token, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
+  const res = await apiFetch<{ data: CustomerAddress }>(
+    `/public/addresses/${id}`,
+    token,
+    {
+      method: "PUT",
+      body: JSON.stringify(data),
+    },
+  );
   return res.data;
 }
 
@@ -75,9 +92,13 @@ export async function deleteAddress(
   id: string,
   token: string,
 ): Promise<CustomerAddress> {
-  const res = await apiFetch<{ data: CustomerAddress }>(`/public/addresses/${id}`, token, {
-    method: "DELETE",
-  });
+  const res = await apiFetch<{ data: CustomerAddress }>(
+    `/public/addresses/${id}`,
+    token,
+    {
+      method: "DELETE",
+    },
+  );
   return res.data;
 }
 
@@ -85,8 +106,12 @@ export async function setDefaultAddress(
   id: string,
   token: string,
 ): Promise<CustomerAddress> {
-  const res = await apiFetch<{ data: CustomerAddress }>(`/public/addresses/${id}/default`, token, {
-    method: "PATCH",
-  });
+  const res = await apiFetch<{ data: CustomerAddress }>(
+    `/public/addresses/${id}/default`,
+    token,
+    {
+      method: "PATCH",
+    },
+  );
   return res.data;
 }

@@ -6,6 +6,7 @@ import {
   seedSystemConfig,
 } from './seeders/system-config.seeder';
 import { seedProducts } from './seeders/product.seeder';
+import { seedShippingRates } from './seeders/shipping-rate.seeder';
 
 const prisma = new PrismaClient();
 
@@ -15,6 +16,7 @@ async function main(): Promise<void> {
   await seedProductCounter(prisma);
   await seedSystemConfig(prisma);
   await seedProducts(prisma);
+  await seedShippingRates(prisma);
   console.log('Seed complete');
 }
 

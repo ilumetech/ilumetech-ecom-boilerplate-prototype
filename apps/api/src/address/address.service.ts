@@ -21,6 +21,9 @@ export class AddressService {
 
     const isFirst = existingCount === 0;
     const shouldBeDefault = isFirst || dto.isDefault === true;
+    const shippingDestination = await this.resolveShippingDestination(
+      dto.shippingDestinationCode,
+    );
 
     return this.prisma.$transaction(async (tx) => {
       if (shouldBeDefault) {
@@ -34,6 +37,7 @@ export class AddressService {
       return tx.customerAddress.create({
         data: {
           ...dto,
+          ...shippingDestination,
           customerId,
           isDefault: shouldBeDefault,
         },
@@ -65,6 +69,9 @@ export class AddressService {
     const address = await this.findOne(id, customerId);
 
     const shouldBeDefault = dto.isDefault === true;
+    const shippingDestination = await this.resolveShippingDestination(
+      dto.shippingDestinationCode,
+    );
 
     return this.prisma.$transaction(async (tx) => {
       if (shouldBeDefault && !address.isDefault) {
@@ -79,6 +86,7 @@ export class AddressService {
         where: { id },
         data: {
           ...dto,
+          ...shippingDestination,
           isDefault: shouldBeDefault ? true : address.isDefault,
         },
       });
@@ -149,5 +157,26 @@ export class AddressService {
         },
       });
     }
+  }
+
+  private async resolveShippingDestination(code?: string) {
+    if (!code) return {};
+
+    const rate = await this.prisma.shippingRate.findFirst({
+      where: { destinationCode: code },
+      select: {
+        destinationCode: true,
+        destinationLabel: true,
+      },
+    });
+
+    if (!rate) {
+      throw new BadRequestException('Shipping destination is unavailable');
+    }
+
+    return {
+      shippingDestinationCode: rate.destinationCode,
+      shippingDestinationLabel: rate.destinationLabel,
+    };
   }
 }

@@ -14,6 +14,8 @@ export interface OrderAddress {
   province: string;
   postalCode: string;
   country: string;
+  shippingDestinationCode?: string;
+  shippingDestinationLabel?: string;
 }
 
 export interface OrderItem {

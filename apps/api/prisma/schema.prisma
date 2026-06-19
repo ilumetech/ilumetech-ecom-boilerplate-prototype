@@ -380,22 +380,42 @@ model WishlistItem {
 }
 
 model CustomerAddress {
-  id           String   @id @default(cuid())
-  customerId   String
-  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  firstName    String
-  lastName     String
-  addressLine1 String
-  addressLine2 String?
-  city         String
-  province     String
-  postalCode   String
-  country      String
-  phone        String?
-  isDefault    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                       String   @id @default(cuid())
+  customerId               String
+  customer                 Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  firstName                String
+  lastName                 String
+  addressLine1             String
+  addressLine2             String?
+  city                     String
+  province                 String
+  postalCode               String
+  country                  String
+  phone                    String?
+  shippingDestinationCode  String?
+  shippingDestinationLabel String?
+  isDefault                Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   @@index([customerId])
 }
 
+model ShippingRate {
+  id               String   @id @default(cuid())
+  originCode       String
+  originLabel      String
+  destinationCode  String
+  destinationLabel String
+  weightKg         Int
+  service          String
+  shipmentType     String
+  tariffIdr        Int
+  etd              String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([originCode, destinationCode, weightKg, service, shipmentType])
+  @@index([destinationCode])
+  @@index([destinationLabel])
+}

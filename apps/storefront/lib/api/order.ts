@@ -15,6 +15,7 @@ export interface CreateOrderAddressInput {
   province: string;
   postalCode: string;
   country: string;
+  shippingDestinationCode: string;
 }
 
 export interface CreateOrderInput {
@@ -24,7 +25,7 @@ export interface CreateOrderInput {
   customerPhone: string;
   shippingAddress: CreateOrderAddressInput;
   shippingMethod?: string;
-  shippingAmount?: number;
+  shippingService: string;
   promoCode?: string;
 }
 
@@ -52,9 +53,13 @@ export async function refreshOrderStatus(
   id: string,
   token: string,
 ): Promise<Order> {
-  const res = await apiFetch<{ data: Order }>(`/public/orders/${id}/refresh-status`, token, {
-    method: "POST",
-  });
+  const res = await apiFetch<{ data: Order }>(
+    `/public/orders/${id}/refresh-status`,
+    token,
+    {
+      method: "POST",
+    },
+  );
   return res.data;
 }
 

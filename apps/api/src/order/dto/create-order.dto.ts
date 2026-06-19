@@ -4,7 +4,6 @@ import {
   IsEmail,
   IsInt,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
   Min,
@@ -55,6 +54,10 @@ export class CreateOrderAddressDto {
   @IsString()
   @IsNotEmpty()
   country: string;
+
+  @IsString()
+  @IsNotEmpty()
+  shippingDestinationCode: string;
 }
 
 export class CreateOrderDto {
@@ -83,11 +86,9 @@ export class CreateOrderDto {
   @IsString()
   shippingMethod?: string;
 
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  shippingAmount?: number;
+  @IsString()
+  @IsNotEmpty()
+  shippingService: string;
 
   @IsOptional()
   @IsString()
